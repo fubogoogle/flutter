@@ -51,7 +51,7 @@ void main() {
     final Directory exampleAppDir =
         tempDir.childDirectory(testName).childDirectory('example');
 
-    final File buildGradleFile = exampleAppDir.childDirectory('android').childFile('build.gradle');
+    final File buildGradleFile = exampleAppDir.childDirectory('android').childFile('build.gradle.kts');
     expect(buildGradleFile, exists);
 
     final String buildGradle = buildGradleFile.readAsStringSync();
@@ -112,7 +112,7 @@ void main() {
     expect(gradleProperties, exists);
 
     gradleProperties.writeAsStringSync('''
-org.gradle.jvmargs=-Xmx1536M
+org.gradle.jvmargs=-Xmx4G -XX:MaxMetaspaceSize=2G -XX:+HeapDumpOnOutOfMemoryError
 android.useAndroidX=true
 android.enableJetifier=true
 android.enableR8=true''');

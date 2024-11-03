@@ -2,18 +2,39 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// Flutter code sample for [BuildOwner].
-
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
-void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  final Size size = measureWidget(const SizedBox(width: 640, height: 480));
+/// Flutter code sample for [BuildOwner].
 
-  // Just displays the size calculated above.
+void main() {
   runApp(
-    WidgetsApp(
+    const BuildOwnerExample(),
+  );
+}
+
+class BuildOwnerExample extends StatefulWidget {
+  const BuildOwnerExample({
+    super.key,
+  });
+
+  @override
+  State<BuildOwnerExample> createState() => _BuildOwnerExampleState();
+}
+
+class _BuildOwnerExampleState extends State<BuildOwnerExample> {
+  late final Size size;
+
+  @override
+  void initState() {
+    super.initState();
+    size = measureWidget(const SizedBox(width: 640, height: 480));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Just displays the size calculated above.
+    return WidgetsApp(
       title: 'BuildOwner Sample',
       color: const Color(0xff000000),
       builder: (BuildContext context, Widget? child) {
@@ -23,8 +44,8 @@ void main() {
           ),
         );
       },
-    ),
-  );
+    );
+  }
 }
 
 Size measureWidget(Widget widget) {

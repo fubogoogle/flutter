@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+/// @docImport 'color_scheme.dart';
+/// @docImport 'progress_indicator.dart';
+library;
+
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/foundation.dart';
@@ -35,6 +39,10 @@ class ProgressIndicatorThemeData with Diagnosticable {
     this.linearMinHeight,
     this.circularTrackColor,
     this.refreshBackgroundColor,
+    this.borderRadius,
+    this.stopIndicatorColor,
+    this.stopIndicatorRadius,
+    this.trackGap,
   });
 
   /// The color of the [ProgressIndicator]'s indicator.
@@ -62,6 +70,27 @@ class ProgressIndicatorThemeData with Diagnosticable {
   /// {@macro flutter.material.RefreshProgressIndicator.backgroundColor}
   final Color? refreshBackgroundColor;
 
+  /// Overrides the border radius of the [ProgressIndicator].
+  final BorderRadiusGeometry? borderRadius;
+
+  /// Overrides the stop indicator color of the [LinearProgressIndicator].
+  ///
+  /// If [LinearProgressIndicator.year2023] is false or [ThemeData.useMaterial3]
+  /// is false, then no stop indicator will be drawn.
+  final Color? stopIndicatorColor;
+
+  /// Overrides the stop indicator radius of the [LinearProgressIndicator].
+  ///
+  /// If [LinearProgressIndicator.year2023] is false or [ThemeData.useMaterial3]
+  /// is false, then no stop indicator will be drawn.
+  final double? stopIndicatorRadius;
+
+  /// Overrides the gap between the [LinearProgressIndicator].
+  ///
+  /// If [LinearProgressIndicator.year2023] is false or [ThemeData.useMaterial3]
+  /// is false, then no track gap will be drawn.
+  final double? trackGap;
+
   /// Creates a copy of this object but with the given fields replaced with the
   /// new values.
   ProgressIndicatorThemeData copyWith({
@@ -70,6 +99,10 @@ class ProgressIndicatorThemeData with Diagnosticable {
     double? linearMinHeight,
     Color? circularTrackColor,
     Color? refreshBackgroundColor,
+    BorderRadiusGeometry? borderRadius,
+    Color? stopIndicatorColor,
+    double? stopIndicatorRadius,
+    double? trackGap,
   }) {
     return ProgressIndicatorThemeData(
       color: color ?? this.color,
@@ -77,6 +110,10 @@ class ProgressIndicatorThemeData with Diagnosticable {
       linearMinHeight : linearMinHeight ?? this.linearMinHeight,
       circularTrackColor : circularTrackColor ?? this.circularTrackColor,
       refreshBackgroundColor : refreshBackgroundColor ?? this.refreshBackgroundColor,
+      borderRadius : borderRadius ?? this.borderRadius,
+      stopIndicatorColor : stopIndicatorColor ?? this.stopIndicatorColor,
+      stopIndicatorRadius : stopIndicatorRadius ?? this.stopIndicatorRadius,
+      trackGap : trackGap ?? this.trackGap,
     );
   }
 
@@ -84,16 +121,19 @@ class ProgressIndicatorThemeData with Diagnosticable {
   ///
   /// If both arguments are null, then null is returned.
   static ProgressIndicatorThemeData? lerp(ProgressIndicatorThemeData? a, ProgressIndicatorThemeData? b, double t) {
-    if (a == null && b == null) {
-      return null;
+    if (identical(a, b)) {
+      return a;
     }
-    assert(t != null);
     return ProgressIndicatorThemeData(
       color: Color.lerp(a?.color, b?.color, t),
       linearTrackColor : Color.lerp(a?.linearTrackColor, b?.linearTrackColor, t),
       linearMinHeight : lerpDouble(a?.linearMinHeight, b?.linearMinHeight, t),
       circularTrackColor : Color.lerp(a?.circularTrackColor, b?.circularTrackColor, t),
       refreshBackgroundColor : Color.lerp(a?.refreshBackgroundColor, b?.refreshBackgroundColor, t),
+      borderRadius : BorderRadiusGeometry.lerp(a?.borderRadius, b?.borderRadius, t),
+      stopIndicatorColor : Color.lerp(a?.stopIndicatorColor, b?.stopIndicatorColor, t),
+      stopIndicatorRadius : lerpDouble(a?.stopIndicatorRadius, b?.stopIndicatorRadius, t),
+      trackGap : lerpDouble(a?.trackGap, b?.trackGap, t),
     );
   }
 
@@ -104,6 +144,10 @@ class ProgressIndicatorThemeData with Diagnosticable {
     linearMinHeight,
     circularTrackColor,
     refreshBackgroundColor,
+    borderRadius,
+    stopIndicatorColor,
+    stopIndicatorRadius,
+    trackGap,
   );
 
   @override
@@ -119,7 +163,11 @@ class ProgressIndicatorThemeData with Diagnosticable {
       && other.linearTrackColor == linearTrackColor
       && other.linearMinHeight == linearMinHeight
       && other.circularTrackColor == circularTrackColor
-      && other.refreshBackgroundColor == refreshBackgroundColor;
+      && other.refreshBackgroundColor == refreshBackgroundColor
+      && other.borderRadius == borderRadius
+      && other.stopIndicatorColor == stopIndicatorColor
+      && other.stopIndicatorRadius == stopIndicatorRadius
+      && other.trackGap == trackGap;
   }
 
   @override
@@ -130,6 +178,10 @@ class ProgressIndicatorThemeData with Diagnosticable {
     properties.add(DoubleProperty('linearMinHeight', linearMinHeight, defaultValue: null));
     properties.add(ColorProperty('circularTrackColor', circularTrackColor, defaultValue: null));
     properties.add(ColorProperty('refreshBackgroundColor', refreshBackgroundColor, defaultValue: null));
+    properties.add(DiagnosticsProperty<BorderRadiusGeometry>('borderRadius', borderRadius, defaultValue: null));
+    properties.add(ColorProperty('stopIndicatorColor', stopIndicatorColor, defaultValue: null));
+    properties.add(DoubleProperty('stopIndicatorRadius', stopIndicatorRadius, defaultValue: null));
+    properties.add(DoubleProperty('trackGap', trackGap, defaultValue: null));
   }
 }
 
@@ -160,7 +212,7 @@ class ProgressIndicatorTheme extends InheritedTheme {
     super.key,
     required this.data,
     required super.child,
-  }) : assert(data != null);
+  });
 
   /// The properties for descendant [ProgressIndicator] widgets.
   final ProgressIndicatorThemeData data;

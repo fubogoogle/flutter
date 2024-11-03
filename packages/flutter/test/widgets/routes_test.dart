@@ -5,6 +5,7 @@
 import 'dart:collection';
 import 'dart:ui';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -89,6 +90,9 @@ class TestRoute extends Route<String?> with LocalHistoryRoute<String?> {
   @override
   void dispose() {
     log('dispose');
+    for (final OverlayEntry e in _entries) {
+      e.dispose();
+    }
     _entries.clear();
     routes.remove(this);
     super.dispose();
@@ -116,8 +120,6 @@ void main() {
   testWidgets('Route settings', (WidgetTester tester) async {
     const RouteSettings settings = RouteSettings(name: 'A');
     expect(settings, hasOneLineDescription);
-    final RouteSettings settings2 = settings.copyWith(name: 'B');
-    expect(settings2.name, 'B');
   });
 
   testWidgets('Route settings arguments', (WidgetTester tester) async {
@@ -127,14 +129,6 @@ void main() {
     final Object arguments = Object();
     final RouteSettings settings2 = RouteSettings(name: 'A', arguments: arguments);
     expect(settings2.arguments, same(arguments));
-
-    final RouteSettings settings3 = settings2.copyWith();
-    expect(settings3.arguments, equals(arguments));
-
-    final Object arguments2 = Object();
-    final RouteSettings settings4 = settings2.copyWith(arguments: arguments2);
-    expect(settings4.arguments, same(arguments2));
-    expect(settings4.arguments, isNot(same(arguments)));
   });
 
   testWidgets('Route management - push, replace, pop sequence', (WidgetTester tester) async {
@@ -411,7 +405,7 @@ void main() {
       ],
     );
     await tester.pumpWidget(Container());
-    expect(results, equals(<String>['A: dispose', 'b: dispose']));
+    expect(results, equals(<String>['b: dispose', 'A: dispose']));
     expect(routes.isEmpty, isTrue);
     results.clear();
   });
@@ -555,8 +549,11 @@ void main() {
 
   testWidgets('Can autofocus a TextField nested in a Focus in a route.', (WidgetTester tester) async {
     final TextEditingController controller = TextEditingController();
+    addTearDown(controller.dispose);
 
     final FocusNode focusNode = FocusNode(debugLabel: 'Test Node');
+    addTearDown(focusNode.dispose);
+
     await tester.pumpWidget(
       Material(
         child: MaterialApp(
@@ -1740,7 +1737,7 @@ void main() {
       semantics.dispose();
     }, variant: const TargetPlatformVariant(<TargetPlatform>{TargetPlatform.iOS}));
 
-    testWidgets('focus traverse correct when pop multiple page simultaneously', (WidgetTester tester) async {
+    testWidgets('focus traversal is correct when popping multiple pages simultaneously', (WidgetTester tester) async {
       // Regression test: https://github.com/flutter/flutter/issues/48903
       final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
       await tester.pumpWidget(MaterialApp(
@@ -1877,6 +1874,381 @@ void main() {
       await tester.pump();
       expect(tester.takeException(), null);
     });
+
+    testWidgets('requestFocus can be updated', (WidgetTester tester) async {
+      final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(MaterialApp(
+        navigatorKey: navigatorKey,
+        home: const Text('home'),
+      ));
+      expect(find.text('page2'), findsNothing);
+
+      // Navigate to page 2.
+      navigatorKey.currentState!.push<void>(MaterialPageRoute<void>(
+        builder: (BuildContext context) {
+          return const Text('page2');
+        },
+      ));
+
+      await tester.pumpAndSettle();
+      expect(find.text('page2'), findsOneWidget);
+
+      // Check that the modal route is requesting focus.
+      ModalRoute<void>? modalRoute = ModalRoute.of<void>(tester.element(find.text('page2')));
+      expect(modalRoute, isNotNull);
+      expect(modalRoute!.requestFocus, isTrue);
+
+      // Navigate back to the home page.
+      navigatorKey.currentState!.pop();
+      await tester.pumpAndSettle();
+      expect(find.text('page2'), findsNothing);
+
+      // Navigate to page 2 again with requestFocus set to false.
+      navigatorKey.currentState!.push<void>(MaterialPageRoute<void>(
+        requestFocus: false,
+        builder: (BuildContext context) {
+          return const Text('page2');
+        },
+      ));
+
+      await tester.pumpAndSettle();
+      expect(find.text('page2'), findsOneWidget);
+
+      // Check that the modal route is not requesting focus.
+      modalRoute = ModalRoute.of<void>(tester.element(find.text('page2')));
+      expect(modalRoute, isNotNull);
+      expect(modalRoute!.requestFocus, isFalse);
+    });
+
+    testWidgets('outgoing route receives a delegated transition from the new route', (WidgetTester tester) async {
+      final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+      final MaterialPageRoute<void> materialPageRoute = MaterialPageRoute<void>(
+        builder: (BuildContext context) {
+          return Scaffold(
+            body: TextButton(
+              onPressed: () {
+                final CupertinoPageRoute<void> route = CupertinoPageRoute<void>(
+                  builder: (BuildContext context) {
+                    return  const Text('Cupertino Transition');
+                  }
+                );
+                Navigator.of(context).push(route);
+              },
+              child: const Text('Cupertino Transition'),
+            ),
+          );
+        }
+      );
+
+      await tester.pumpWidget(MaterialApp(
+        navigatorKey: navigatorKey,
+        theme: ThemeData(
+          pageTransitionsTheme: const PageTransitionsTheme(
+            builders: <TargetPlatform, PageTransitionsBuilder>{
+              TargetPlatform.iOS: ZoomPageTransitionsBuilder(),
+              TargetPlatform.android: ZoomPageTransitionsBuilder(),
+            },
+          ),
+        ),
+        home: Scaffold(
+          body: TextButton(
+            onPressed: () {
+              navigatorKey.currentState!.push<void>(materialPageRoute);
+            },
+            child: const Text('Material Route Transition'),
+          ),
+        ),
+        )
+      );
+
+      expect(materialPageRoute.receivedTransition, null);
+
+      await tester.tap(find.text('Material Route Transition'));
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Cupertino Transition'), findsOneWidget);
+      expect(find.text('Material Route Transition'), findsNothing);
+
+      expect(materialPageRoute.receivedTransition, null);
+
+      await tester.tap(find.text('Cupertino Transition'));
+
+      await tester.pumpAndSettle();
+
+      expect(materialPageRoute.receivedTransition, isNotNull);
+      expect(materialPageRoute.receivedTransition, CupertinoPageTransition.delegatedTransition);
+    });
+
+    testWidgets('outgoing route does not receive a delegated transition from a route with the same transition', (WidgetTester tester) async {
+      final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+      final MaterialPageRoute<void> materialPageRoute = MaterialPageRoute<void>(
+        builder: (BuildContext context) {
+          return Scaffold(
+            body: TextButton(
+              onPressed: () {
+                final MaterialPageRoute<void> route = MaterialPageRoute<void>(
+                  builder: (BuildContext context) {
+                    return  const Text('Page 3');
+                  }
+                );
+                Navigator.of(context).push(route);
+              },
+              child: const Text('Second Material Transition'),
+            ),
+          );
+        }
+      );
+
+      await tester.pumpWidget(MaterialApp(
+        navigatorKey: navigatorKey,
+        theme: ThemeData(
+          pageTransitionsTheme: const PageTransitionsTheme(
+            builders: <TargetPlatform, PageTransitionsBuilder>{
+              TargetPlatform.iOS: ZoomPageTransitionsBuilder(),
+              TargetPlatform.android: ZoomPageTransitionsBuilder(),
+            },
+          ),
+        ),
+        home: Scaffold(
+          body: TextButton(
+            onPressed: () {
+              navigatorKey.currentState!.push<void>(materialPageRoute);
+            },
+            child: const Text('Material Route Transition'),
+          ),
+        ),
+        )
+      );
+
+      expect(materialPageRoute.receivedTransition, null);
+
+      await tester.tap(find.text('Material Route Transition'));
+
+      await tester.pumpAndSettle();
+
+      expect(materialPageRoute.receivedTransition, null);
+
+      await tester.tap(find.text('Second Material Transition'));
+
+      await tester.pumpAndSettle();
+
+      expect(materialPageRoute.receivedTransition, null);
+    });
+
+    testWidgets('outgoing route does not receive a delegated transition from a route with the same un-snapshotted transition', (WidgetTester tester) async {
+      final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+      final MaterialPageRoute<void> materialPageRoute = MaterialPageRoute<void>(
+        allowSnapshotting: false,
+        builder: (BuildContext context) {
+          return Scaffold(
+            body: TextButton(
+              onPressed: () {
+                final MaterialPageRoute<void> route = MaterialPageRoute<void>(
+                  allowSnapshotting: false,
+                  builder: (BuildContext context) {
+                    return  const Text('Page 3');
+                  }
+                );
+                Navigator.of(context).push(route);
+              },
+              child: const Text('Second Material Transition'),
+            ),
+          );
+        }
+      );
+
+      await tester.pumpWidget(MaterialApp(
+        navigatorKey: navigatorKey,
+        theme: ThemeData(
+          pageTransitionsTheme: const PageTransitionsTheme(
+            builders: <TargetPlatform, PageTransitionsBuilder>{
+              TargetPlatform.iOS: ZoomPageTransitionsBuilder(),
+              TargetPlatform.android: ZoomPageTransitionsBuilder(),
+            },
+          ),
+        ),
+        home: Scaffold(
+          body: TextButton(
+            onPressed: () {
+              navigatorKey.currentState!.push<void>(materialPageRoute);
+            },
+            child: const Text('Material Route Transition'),
+          ),
+        ),
+        )
+      );
+
+      expect(materialPageRoute.receivedTransition, null);
+
+      await tester.tap(find.text('Material Route Transition'));
+
+      await tester.pumpAndSettle();
+
+      expect(materialPageRoute.receivedTransition, null);
+
+      await tester.tap(find.text('Second Material Transition'));
+
+      await tester.pumpAndSettle();
+
+      expect(materialPageRoute.receivedTransition, null);
+
+      navigatorKey.currentState!.pop();
+      await tester.pumpAndSettle();
+
+      expect(materialPageRoute.receivedTransition, null);
+    });
+
+    testWidgets('a received transition animates the same as a non-received transition', (WidgetTester tester) async {
+      final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+      const Key firstPlaceholderKey = Key('First Placeholder');
+      const Key secondPlaceholderKey = Key('Second Placeholder');
+
+      final CupertinoPageRoute<void> cupertinoPageRoute = CupertinoPageRoute<void>(
+        builder: (BuildContext context) {
+          return Column(
+            children: <Widget>[
+              const Placeholder(key: secondPlaceholderKey),
+              TextButton(
+                onPressed: () {
+                  final CupertinoPageRoute<void> route = CupertinoPageRoute<void>(
+                    builder: (BuildContext context) {
+                      return  Column(
+                        children: <Widget>[
+                          TextButton(
+                            onPressed: () {},
+                            child: const Text('Page 3')
+                          ),
+                        ],
+                      );
+                    }
+                  );
+                  Navigator.of(context).push(route);
+                },
+                child: const Text('Second Cupertino Transition'),
+              ),
+            ],
+          );
+        }
+      );
+
+      await tester.pumpWidget(MaterialApp(
+        navigatorKey: navigatorKey,
+        theme: ThemeData(
+          pageTransitionsTheme: const PageTransitionsTheme(
+            builders: <TargetPlatform, PageTransitionsBuilder>{
+              TargetPlatform.iOS: ZoomPageTransitionsBuilder(),
+              TargetPlatform.android: ZoomPageTransitionsBuilder(),
+            },
+          ),
+        ),
+        home: Column(
+          children: <Widget>[
+            const Placeholder(key: firstPlaceholderKey),
+            TextButton(
+              onPressed: () {
+                navigatorKey.currentState!.push<void>(cupertinoPageRoute);
+              },
+              child: const Text('First Cupertino Transition'),
+            ),
+          ]
+        ),
+        )
+      );
+
+      // Start first page transition. This one will be playing the delegated transition
+      // received from Cupertino page route.
+      await tester.tap(find.text('First Cupertino Transition'));
+
+      await tester.pump();
+
+      // Save the position of element on the screen at certain intervals
+      await tester.pump(const Duration(milliseconds: 40));
+      final double xLocationIntervalOne = tester.getTopLeft(find.byKey(firstPlaceholderKey)).dx;
+
+      await tester.pump(const Duration(milliseconds: 40));
+      final double xLocationIntervalTwo =  tester.getTopLeft(find.byKey(firstPlaceholderKey)).dx;
+
+      await tester.pump(const Duration(milliseconds: 40));
+      final double xLocationIntervalThree = tester.getTopLeft(find.byKey(firstPlaceholderKey)).dx;
+
+      await tester.pump(const Duration(milliseconds: 40));
+      final double xLocationIntervalFour = tester.getTopLeft(find.byKey(firstPlaceholderKey)).dx;
+
+      await tester.pump(const Duration(milliseconds: 40));
+      final double xLocationIntervalFive = tester.getTopLeft(find.byKey(firstPlaceholderKey)).dx;
+
+      await tester.pump(const Duration(milliseconds: 40));
+      final double xLocationIntervalSix = tester.getTopLeft(find.byKey(firstPlaceholderKey)).dx;
+
+      await tester.pump(const Duration(milliseconds: 40));
+      final double xLocationIntervalSeven = tester.getTopLeft(find.byKey(firstPlaceholderKey)).dx;
+
+      await tester.pump(const Duration(milliseconds: 40));
+      final double xLocationIntervalEight = tester.getTopLeft(find.byKey(firstPlaceholderKey)).dx;
+
+      await tester.pump(const Duration(milliseconds: 40));
+      final double xLocationIntervalNine = tester.getTopLeft(find.byKey(firstPlaceholderKey)).dx;
+
+      await tester.pump(const Duration(milliseconds: 40));
+      final double xLocationIntervalTen = tester.getTopLeft(find.byKey(firstPlaceholderKey)).dx;
+
+      await tester.pump(const Duration(milliseconds: 50));
+      final double xLocationIntervalEleven = tester.getTopLeft(find.byKey(firstPlaceholderKey)).dx;
+
+      await tester.pump(const Duration(milliseconds: 50));
+      final double xLocationIntervalTwelve = tester.getTopLeft(find.byKey(firstPlaceholderKey)).dx;
+
+      // Give time to the animation to finish
+      await tester.pumpAndSettle(const Duration(milliseconds: 1));
+
+      // Start the second page transition. This time it's the default secondary
+      // transition of a Cupertino page, with no delegation.
+      await tester.tap(find.text('Second Cupertino Transition'));
+
+      await tester.pump();
+
+      // Compare against the values from before.
+      await tester.pump(const Duration(milliseconds: 40));
+      expect(tester.getTopLeft(find.byKey(secondPlaceholderKey)).dx, moreOrLessEquals(xLocationIntervalOne, epsilon: 0.1));
+
+      await tester.pump(const Duration(milliseconds: 40));
+      expect(tester.getTopLeft(find.byKey(secondPlaceholderKey)).dx, moreOrLessEquals(xLocationIntervalTwo, epsilon: 0.1));
+
+      await tester.pump(const Duration(milliseconds: 40));
+      expect(tester.getTopLeft(find.byKey(secondPlaceholderKey)).dx, moreOrLessEquals(xLocationIntervalThree, epsilon: 0.1));
+
+      await tester.pump(const Duration(milliseconds: 40));
+      expect(tester.getTopLeft(find.byKey(secondPlaceholderKey)).dx, moreOrLessEquals(xLocationIntervalFour, epsilon: 0.1));
+
+      await tester.pump(const Duration(milliseconds: 40));
+      expect(tester.getTopLeft(find.byKey(secondPlaceholderKey)).dx, moreOrLessEquals(xLocationIntervalFive, epsilon: 0.1));
+
+      await tester.pump(const Duration(milliseconds: 40));
+      expect(tester.getTopLeft(find.byKey(secondPlaceholderKey)).dx, moreOrLessEquals(xLocationIntervalSix, epsilon: 0.1));
+
+      await tester.pump(const Duration(milliseconds: 40));
+      expect(tester.getTopLeft(find.byKey(secondPlaceholderKey)).dx, moreOrLessEquals(xLocationIntervalSeven, epsilon: 0.1));
+
+      await tester.pump(const Duration(milliseconds: 40));
+      expect(tester.getTopLeft(find.byKey(secondPlaceholderKey)).dx, moreOrLessEquals(xLocationIntervalEight, epsilon: 0.1));
+
+      await tester.pump(const Duration(milliseconds: 40));
+      expect(tester.getTopLeft(find.byKey(secondPlaceholderKey)).dx, moreOrLessEquals(xLocationIntervalNine, epsilon: 0.1));
+
+      await tester.pump(const Duration(milliseconds: 40));
+      expect(tester.getTopLeft(find.byKey(secondPlaceholderKey)).dx, moreOrLessEquals(xLocationIntervalTen, epsilon: 0.1));
+
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(tester.getTopLeft(find.byKey(secondPlaceholderKey)).dx, moreOrLessEquals(xLocationIntervalEleven, epsilon: 0.1));
+
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(tester.getTopLeft(find.byKey(secondPlaceholderKey)).dx, moreOrLessEquals(xLocationIntervalTwelve, epsilon: 0.1));
+    });
   });
 
   testWidgets('can be dismissed with escape keyboard shortcut', (WidgetTester tester) async {
@@ -1975,6 +2347,78 @@ void main() {
     await tester.restoreFrom(restorationData);
     expect(find.byType(AlertDialog), findsOneWidget);
   }, skip: isBrowser); // https://github.com/flutter/flutter/issues/33615
+
+  group('NavigationNotifications', () {
+    testWidgets('with no WillPopScope', (WidgetTester tester) async {
+      final List<NavigationNotification> notifications = <NavigationNotification>[];
+      await tester.pumpWidget(
+        NotificationListener<NavigationNotification>(
+          onNotification: (NavigationNotification notification) {
+            notifications.add(notification);
+            return true;
+          },
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Navigator(
+              initialRoute: '/',
+              onGenerateRoute: (RouteSettings settings) {
+                return MaterialPageRoute<void>(
+                  builder: (BuildContext context) {
+                    return const SizedBox.shrink();
+                  },
+                  settings: settings,
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      // Only one notification, from the initial route, where a pop can't be
+      // handled because there's no other route to pop.
+      expect(notifications, hasLength(1));
+      expect(notifications.first.canHandlePop, isFalse);
+    });
+
+    testWidgets('with WillPopScope', (WidgetTester tester) async {
+      final List<NavigationNotification> notifications = <NavigationNotification>[];
+      await tester.pumpWidget(
+        NotificationListener<NavigationNotification>(
+          onNotification: (NavigationNotification notification) {
+            notifications.add(notification);
+            return true;
+          },
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Navigator(
+              initialRoute: '/',
+              onGenerateRoute: (RouteSettings settings) {
+                return MaterialPageRoute<void>(
+                  builder: (BuildContext context) {
+                    return WillPopScope(
+                      onWillPop: () {
+                        return Future<bool>.value(false);
+                      },
+                      child: const SizedBox.shrink(),
+                    );
+                  },
+                  settings: settings,
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      // Two notifications. The first is from the initial route, where a pop
+      // can't be handled because it's the only route. The second is from
+      // registering the WillPopScope, where it will always want to receive
+      // pops.
+      expect(notifications, hasLength(2));
+      expect(notifications.first.canHandlePop, isFalse);
+      expect(notifications.last.canHandlePop, isTrue);
+    });
+  });
 }
 
 double _getOpacity(GlobalKey key, WidgetTester tester) {
@@ -2084,12 +2528,8 @@ class _TestDialogRouteWithCustomBarrierCurve<T> extends PopupRoute<T> {
   final Color? barrierColor;
 
   @override
-  Curve get barrierCurve {
-    if (_barrierCurve == null) {
-      return super.barrierCurve;
-    }
-    return _barrierCurve!;
-  }
+  Curve get barrierCurve => _barrierCurve ?? super.barrierCurve;
+
   final Curve? _barrierCurve;
 
   @override
@@ -2163,6 +2603,7 @@ class WidgetWithNoLocalHistoryState extends State<WidgetWithNoLocalHistory> {
 class _RestorableDialogTestWidget extends StatelessWidget {
   const _RestorableDialogTestWidget();
 
+  @pragma('vm:entry-point')
   static Route<Object?> _dialogBuilder(BuildContext context, Object? arguments) {
     return RawDialogRoute<void>(
       pageBuilder: (

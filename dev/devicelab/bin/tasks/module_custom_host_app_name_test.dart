@@ -73,7 +73,7 @@ Future<void> main() async {
       content = await pubspec.readAsString();
       content = content.replaceFirst(
         '${platformLineSep}dependencies:$platformLineSep',
-        '${platformLineSep}dependencies:$platformLineSep  device_info: 2.0.3$platformLineSep  package_info: 2.0.2$platformLineSep',
+        '${platformLineSep}dependencies:$platformLineSep',
       );
       await pubspec.writeAsString(content, flush: true);
       await inDirectory(projectDir, () async {
@@ -178,6 +178,7 @@ Future<void> main() async {
             flutterDirectory.path,
             'dev',
             'integration_tests',
+            'pure_android_host_apps',
             'android_custom_host_app',
           ),
         ),
@@ -261,9 +262,8 @@ Future<void> main() async {
         'SampleApp',
         'build',
         'intermediates',
-        'merged_assets',
+        'assets',
         'debug',
-        'out',
         'flutter_assets',
         'assets',
         'read-only.txt',
@@ -275,7 +275,7 @@ Future<void> main() async {
 
       String modes = readonlyDebugAssetFile.statSync().modeString();
       print('\nread-only.txt file access modes = $modes');
-      if (modes != null && modes.compareTo(fileReadWriteMode) != 0) {
+      if (modes.compareTo(fileReadWriteMode) != 0) {
         return TaskResult.failure('Failed to make assets user-readable and writable');
       }
 
@@ -333,9 +333,8 @@ Future<void> main() async {
         'SampleApp',
         'build',
         'intermediates',
-        'merged_assets',
+        'assets',
         'release',
-        'out',
         'flutter_assets',
         'assets',
         'read-only.txt',
@@ -347,7 +346,7 @@ Future<void> main() async {
 
       modes = readonlyReleaseAssetFile.statSync().modeString();
       print('\nread-only.txt file access modes = $modes');
-      if (modes != null && modes.compareTo(fileReadWriteMode) != 0) {
+      if (modes.compareTo(fileReadWriteMode) != 0) {
         return TaskResult.failure('Failed to make assets user-readable and writable');
       }
 

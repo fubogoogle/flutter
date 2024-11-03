@@ -34,9 +34,6 @@ Future<void> main() async {
           ...debugAssets,
           ...baseApkFiles,
           'lib/armeabi-v7a/libflutter.so',
-          // Debug mode intentionally includes `x86` and `x86_64`.
-          'lib/x86/libflutter.so',
-          'lib/x86_64/libflutter.so',
         ], apkFiles);
 
         checkCollectionDoesNotContain<String>(<String>[
@@ -65,9 +62,7 @@ Future<void> main() async {
           ...flutterAssets,
           ...debugAssets,
           ...baseApkFiles,
-          // Debug mode intentionally includes `x86` and `x86_64`.
           'lib/x86/libflutter.so',
-          'lib/x86_64/libflutter.so',
         ], apkFiles);
 
         checkCollectionDoesNotContain<String>(<String>[
@@ -96,8 +91,6 @@ Future<void> main() async {
           ...flutterAssets,
           ...debugAssets,
           ...baseApkFiles,
-          // Debug mode intentionally includes `x86` and `x86_64`.
-          'lib/x86/libflutter.so',
           'lib/x86_64/libflutter.so',
         ], apkFiles);
 
@@ -252,10 +245,14 @@ Future<void> main() async {
         section('gradlew on build script with error');
         await project.introduceError();
         ProcessResult result = await inDirectory(project.rootPath, () {
-          return executeFlutter('build', options: <String>[
-            'apk',
-            '--release',
-          ]);
+          return executeFlutter(
+            'build',
+            options: <String>[
+              'apk',
+              '--release',
+            ],
+            canFail: true,
+          );
         });
 
         if (result.exitCode == 0) {
@@ -278,10 +275,14 @@ Future<void> main() async {
         section('flutter build apk on build script with error');
         await project.introduceError();
         result = await inDirectory(project.rootPath, () {
-          return executeFlutter('build', options: <String>[
-            'apk',
-            '--release',
-          ]);
+          return executeFlutter(
+            'build',
+            options: <String>[
+              'apk',
+              '--release',
+            ],
+            canFail: true,
+          );
         });
         if (result.exitCode == 0) {
           throw failure(
@@ -304,10 +305,14 @@ Future<void> main() async {
         section('gradlew assembleDebug forwards stderr');
         await project.introducePubspecError();
         final ProcessResult result = await inDirectory(project.rootPath, () {
-          return executeFlutter('build', options: <String>[
-            'apk',
-            '--release',
-          ]);
+          return executeFlutter(
+            'build',
+            options: <String>[
+              'apk',
+              '--release',
+            ],
+            canFail: true,
+          );
         });
         if (result.exitCode == 0) {
           throw failure(

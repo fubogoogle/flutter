@@ -17,8 +17,8 @@ void main() {
         textDirection: TextDirection.ltr,
         child: Semantics(
           container: true,
-          child: Column(
-            children: const <Widget>[
+          child: const Column(
+            children: <Widget>[
               Text('Michael Goderbauer'),
               Text('goderbauer@google.com'),
             ],
@@ -51,8 +51,8 @@ void main() {
         child: Semantics(
           container: true,
           explicitChildNodes: true,
-          child: Column(
-            children: const <Widget>[
+          child: const Column(
+            children: <Widget>[
               Text('Michael Goderbauer'),
               Text('goderbauer@google.com'),
             ],
@@ -98,8 +98,8 @@ void main() {
           explicitChildNodes: true,
           child: Semantics(
             label: 'Signed in as',
-            child: Column(
-              children: const <Widget>[
+            child: const Column(
+              children: <Widget>[
                 Text('Michael Goderbauer'),
                 Text('goderbauer@google.com'),
               ],
@@ -140,8 +140,8 @@ void main() {
           container: true,
           child: Semantics(
             label: 'Signed in as',
-            child: Column(
-              children: const <Widget>[
+            child: const Column(
+              children: <Widget>[
                 Text('Michael Goderbauer'),
                 Text('goderbauer@google.com'),
               ],
@@ -227,17 +227,17 @@ void main() {
               children: <TestSemantics>[
                 TestSemantics(
                   id: 2,
-                  flags: SemanticsFlag.isSelected.index,
+                  flags: <SemanticsFlag>[SemanticsFlag.hasSelectedState, SemanticsFlag.isSelected],
                   label: 'node 1',
                 ),
                 TestSemantics(
                   id: 3,
-                  flags: SemanticsFlag.isSelected.index,
+                  flags: <SemanticsFlag>[SemanticsFlag.hasSelectedState, SemanticsFlag.isSelected],
                   label: 'node 2',
                 ),
                 TestSemantics(
                   id: 4,
-                  flags: SemanticsFlag.isSelected.index,
+                  flags: <SemanticsFlag>[SemanticsFlag.hasSelectedState, SemanticsFlag.isSelected],
                   label: 'node 3',
                 ),
               ],

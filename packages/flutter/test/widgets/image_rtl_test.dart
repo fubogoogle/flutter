@@ -8,31 +8,33 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../rendering/mock_canvas.dart';
+class _TestImageProvider extends ImageProvider<_TestImageProvider> {
+  _TestImageProvider(ui.Image image) {
+    _completer = OneFrameImageStreamCompleter(
+      SynchronousFuture<ImageInfo>(ImageInfo(image: image)),
+    );
+  }
 
-class TestImageProvider extends ImageProvider<TestImageProvider> {
-  const TestImageProvider(this.image);
-
-  final ui.Image image;
+  late final OneFrameImageStreamCompleter _completer;
 
   @override
-  Future<TestImageProvider> obtainKey(ImageConfiguration configuration) {
-    return SynchronousFuture<TestImageProvider>(this);
+  Future<_TestImageProvider> obtainKey(ImageConfiguration configuration) {
+    return SynchronousFuture<_TestImageProvider>(this);
   }
 
   @override
-  ImageStreamCompleter load(TestImageProvider key, DecoderCallback decode) {
-    return OneFrameImageStreamCompleter(
-      SynchronousFuture<ImageInfo>(ImageInfo(image: image)),
-    );
+  ImageStreamCompleter loadImage(_TestImageProvider key, ImageDecoderCallback decode) {
+    return _completer;
   }
 }
 
 void main() {
   late ui.Image testImage;
-  setUpAll(() async {
+
+  setUp(() async {
     testImage = await createTestImage(width: 16, height: 9);
   });
+
   testWidgets('DecorationImage RTL with alignment topEnd and match', (WidgetTester tester) async {
     await tester.pumpWidget(
       Directionality(
@@ -43,7 +45,7 @@ void main() {
             height: 50.0,
             decoration: BoxDecoration(
               image: DecorationImage(
-                image: TestImageProvider(testImage),
+                image: _TestImageProvider(testImage),
                 alignment: AlignmentDirectional.topEnd,
                 repeat: ImageRepeat.repeatX,
                 matchTextDirection: true,
@@ -52,8 +54,8 @@ void main() {
           ),
         ),
       ),
-      Duration.zero,
-      EnginePhase.layout, // so that we don't try to paint the fake images
+      duration: Duration.zero,
+      phase: EnginePhase.layout, // so that we don't try to paint the fake images
     );
     expect(find.byType(Container), paints
       ..clipRect(rect: const Rect.fromLTRB(0.0, 0.0, 100.0, 50.0))
@@ -82,7 +84,7 @@ void main() {
             height: 50.0,
             decoration: BoxDecoration(
               image: DecorationImage(
-                image: TestImageProvider(testImage),
+                image: _TestImageProvider(testImage),
                 alignment: AlignmentDirectional.topEnd,
                 repeat: ImageRepeat.repeatX,
                 matchTextDirection: true,
@@ -91,8 +93,8 @@ void main() {
           ),
         ),
       ),
-      Duration.zero,
-      EnginePhase.layout, // so that we don't try to paint the fake images
+      duration: Duration.zero,
+      phase: EnginePhase.layout, // so that we don't try to paint the fake images
     );
     expect(find.byType(Container), paints
       ..clipRect(rect: const Rect.fromLTRB(0.0, 0.0, 100.0, 50.0))
@@ -118,7 +120,7 @@ void main() {
             height: 50.0,
             decoration: BoxDecoration(
               image: DecorationImage(
-                image: TestImageProvider(testImage),
+                image: _TestImageProvider(testImage),
                 alignment: AlignmentDirectional.topEnd,
                 repeat: ImageRepeat.repeatX,
               ),
@@ -126,8 +128,8 @@ void main() {
           ),
         ),
       ),
-      Duration.zero,
-      EnginePhase.layout, // so that we don't try to paint the fake images
+      duration: Duration.zero,
+      phase: EnginePhase.layout, // so that we don't try to paint the fake images
     );
     expect(find.byType(Container), paints
       ..clipRect(rect: const Rect.fromLTRB(0.0, 0.0, 100.0, 50.0))
@@ -153,7 +155,7 @@ void main() {
             height: 50.0,
             decoration: BoxDecoration(
               image: DecorationImage(
-                image: TestImageProvider(testImage),
+                image: _TestImageProvider(testImage),
                 alignment: AlignmentDirectional.topEnd,
                 repeat: ImageRepeat.repeatX,
               ),
@@ -161,8 +163,8 @@ void main() {
           ),
         ),
       ),
-      Duration.zero,
-      EnginePhase.layout, // so that we don't try to paint the fake images
+      duration: Duration.zero,
+      phase: EnginePhase.layout, // so that we don't try to paint the fake images
     );
     expect(find.byType(Container), paints
       ..clipRect(rect: const Rect.fromLTRB(0.0, 0.0, 100.0, 50.0))
@@ -188,7 +190,7 @@ void main() {
             height: 50.0,
             decoration: BoxDecoration(
               image: DecorationImage(
-                image: TestImageProvider(testImage),
+                image: _TestImageProvider(testImage),
                 alignment: Alignment.centerRight,
                 matchTextDirection: true,
               ),
@@ -196,8 +198,8 @@ void main() {
           ),
         ),
       ),
-      Duration.zero,
-      EnginePhase.layout, // so that we don't try to paint the fake images
+      duration: Duration.zero,
+      phase: EnginePhase.layout, // so that we don't try to paint the fake images
     );
     expect(find.byType(Container), paints
       ..translate(x: 50.0, y: 0.0)
@@ -220,15 +222,15 @@ void main() {
             height: 50.0,
             decoration: BoxDecoration(
               image: DecorationImage(
-                image: TestImageProvider(testImage),
+                image: _TestImageProvider(testImage),
                 alignment: Alignment.centerRight,
               ),
             ),
           ),
         ),
       ),
-      Duration.zero,
-      EnginePhase.layout, // so that we don't try to paint the fake images
+      duration: Duration.zero,
+      phase: EnginePhase.layout, // so that we don't try to paint the fake images
     );
     expect(find.byType(Container), paints
       ..drawImageRect(source: const Rect.fromLTRB(0.0, 0.0, 16.0, 9.0), destination: const Rect.fromLTRB(84.0, 20.5, 100.0, 29.5)),
@@ -247,7 +249,7 @@ void main() {
             height: 50.0,
             decoration: BoxDecoration(
               image: DecorationImage(
-                image: TestImageProvider(testImage),
+                image: _TestImageProvider(testImage),
                 alignment: Alignment.centerRight,
                 matchTextDirection: true,
               ),
@@ -255,8 +257,8 @@ void main() {
           ),
         ),
       ),
-      Duration.zero,
-      EnginePhase.layout, // so that we don't try to paint the fake images
+      duration: Duration.zero,
+      phase: EnginePhase.layout, // so that we don't try to paint the fake images
     );
     expect(find.byType(Container), paints
       ..drawImageRect(source: const Rect.fromLTRB(0.0, 0.0, 16.0, 9.0), destination: const Rect.fromLTRB(84.0, 20.5, 100.0, 29.5)),
@@ -275,7 +277,7 @@ void main() {
             height: 50.0,
             decoration: BoxDecoration(
               image: DecorationImage(
-                image: TestImageProvider(testImage),
+                image: _TestImageProvider(testImage),
                 alignment: Alignment.centerRight,
                 matchTextDirection: true,
               ),
@@ -283,8 +285,8 @@ void main() {
           ),
         ),
       ),
-      Duration.zero,
-      EnginePhase.layout, // so that we don't try to paint the fake images
+      duration: Duration.zero,
+      phase: EnginePhase.layout, // so that we don't try to paint the fake images
     );
     expect(find.byType(Container), paints
       ..drawImageRect(source: const Rect.fromLTRB(0.0, 0.0, 16.0, 9.0), destination: const Rect.fromLTRB(84.0, 20.5, 100.0, 29.5)),
@@ -302,7 +304,7 @@ void main() {
             width: 100.0,
             height: 50.0,
             child: Image(
-              image: TestImageProvider(testImage),
+              image: _TestImageProvider(testImage),
               alignment: AlignmentDirectional.topEnd,
               repeat: ImageRepeat.repeatX,
               matchTextDirection: true,
@@ -310,8 +312,8 @@ void main() {
           ),
         ),
       ),
-      Duration.zero,
-      EnginePhase.layout, // so that we don't try to paint the fake images
+      duration: Duration.zero,
+      phase: EnginePhase.layout, // so that we don't try to paint the fake images
     );
     expect(find.byType(SizedBox), paints
       ..clipRect(rect: const Rect.fromLTRB(0.0, 0.0, 100.0, 50.0))
@@ -328,6 +330,8 @@ void main() {
       ..restore(),
     );
     expect(find.byType(SizedBox), isNot(paints..scale()..scale()));
+
+    imageCache.clear();
   });
 
   testWidgets('Image LTR with alignment topEnd (and pointless match)', (WidgetTester tester) async {
@@ -339,7 +343,7 @@ void main() {
             width: 100.0,
             height: 50.0,
             child: Image(
-              image: TestImageProvider(testImage),
+              image: _TestImageProvider(testImage),
               alignment: AlignmentDirectional.topEnd,
               repeat: ImageRepeat.repeatX,
               matchTextDirection: true,
@@ -347,8 +351,8 @@ void main() {
           ),
         ),
       ),
-      Duration.zero,
-      EnginePhase.layout, // so that we don't try to paint the fake images
+      duration: Duration.zero,
+      phase: EnginePhase.layout, // so that we don't try to paint the fake images
     );
     expect(find.byType(SizedBox), paints
       ..clipRect(rect: const Rect.fromLTRB(0.0, 0.0, 100.0, 50.0))
@@ -373,15 +377,15 @@ void main() {
             width: 100.0,
             height: 50.0,
             child: Image(
-              image: TestImageProvider(testImage),
+              image: _TestImageProvider(testImage),
               alignment: AlignmentDirectional.topEnd,
               repeat: ImageRepeat.repeatX,
             ),
           ),
         ),
       ),
-      Duration.zero,
-      EnginePhase.layout, // so that we don't try to paint the fake images
+      duration: Duration.zero,
+      phase: EnginePhase.layout, // so that we don't try to paint the fake images
     );
     expect(find.byType(SizedBox), paints
       ..clipRect(rect: const Rect.fromLTRB(0.0, 0.0, 100.0, 50.0))
@@ -406,15 +410,15 @@ void main() {
             width: 100.0,
             height: 50.0,
             child: Image(
-              image: TestImageProvider(testImage),
+              image: _TestImageProvider(testImage),
               alignment: AlignmentDirectional.topEnd,
               repeat: ImageRepeat.repeatX,
             ),
           ),
         ),
       ),
-      Duration.zero,
-      EnginePhase.layout, // so that we don't try to paint the fake images
+      duration: Duration.zero,
+      phase: EnginePhase.layout, // so that we don't try to paint the fake images
     );
     expect(find.byType(SizedBox), paints
       ..clipRect(rect: const Rect.fromLTRB(0.0, 0.0, 100.0, 50.0))
@@ -439,7 +443,7 @@ void main() {
             width: 100.0,
             height: 50.0,
             child: Image(
-              image: TestImageProvider(testImage),
+              image: _TestImageProvider(testImage),
               alignment: Alignment.centerRight,
               matchTextDirection: true,
             ),
@@ -467,14 +471,14 @@ void main() {
             width: 100.0,
             height: 50.0,
             child: Image(
-              image: TestImageProvider(testImage),
+              image: _TestImageProvider(testImage),
               alignment: Alignment.centerRight,
             ),
           ),
         ),
       ),
-      Duration.zero,
-      EnginePhase.layout, // so that we don't try to paint the fake images
+      duration: Duration.zero,
+      phase: EnginePhase.layout, // so that we don't try to paint the fake images
     );
     expect(find.byType(SizedBox), paints
       ..drawImageRect(source: const Rect.fromLTRB(0.0, 0.0, 16.0, 9.0), destination: const Rect.fromLTRB(84.0, 20.5, 100.0, 29.5)),
@@ -492,15 +496,15 @@ void main() {
             width: 100.0,
             height: 50.0,
             child: Image(
-              image: TestImageProvider(testImage),
+              image: _TestImageProvider(testImage),
               alignment: Alignment.centerRight,
               matchTextDirection: true,
             ),
           ),
         ),
       ),
-      Duration.zero,
-      EnginePhase.layout, // so that we don't try to paint the fake images
+      duration: Duration.zero,
+      phase: EnginePhase.layout, // so that we don't try to paint the fake images
     );
     expect(find.byType(SizedBox), paints
       ..drawImageRect(source: const Rect.fromLTRB(0.0, 0.0, 16.0, 9.0), destination: const Rect.fromLTRB(84.0, 20.5, 100.0, 29.5)),
@@ -518,15 +522,15 @@ void main() {
             width: 100.0,
             height: 50.0,
             child: Image(
-              image: TestImageProvider(testImage),
+              image: _TestImageProvider(testImage),
               alignment: Alignment.centerRight,
               matchTextDirection: true,
             ),
           ),
         ),
       ),
-      Duration.zero,
-      EnginePhase.layout, // so that we don't try to paint the fake images
+      duration: Duration.zero,
+      phase: EnginePhase.layout, // so that we don't try to paint the fake images
     );
     expect(find.byType(SizedBox), paints
       ..drawImageRect(source: const Rect.fromLTRB(0.0, 0.0, 16.0, 9.0), destination: const Rect.fromLTRB(84.0, 20.5, 100.0, 29.5)),
@@ -536,39 +540,45 @@ void main() {
   });
 
   testWidgets('Image - Switch needing direction', (WidgetTester tester) async {
+    final _TestImageProvider provider = _TestImageProvider(testImage);
+
     await tester.pumpWidget(
       Directionality(
         textDirection: TextDirection.ltr,
         child: Image(
-          image: TestImageProvider(testImage),
+          image: provider,
           alignment: Alignment.centerRight,
         ),
       ),
-      Duration.zero,
-      EnginePhase.layout, // so that we don't try to paint the fake images
+      duration: Duration.zero,
+      phase: EnginePhase.layout, // so that we don't try to paint the fake images
     );
+
     await tester.pumpWidget(
       Directionality(
         textDirection: TextDirection.ltr,
         child: Image(
-          image: TestImageProvider(testImage),
+          image: provider,
           alignment: AlignmentDirectional.centerEnd,
           matchTextDirection: true,
         ),
       ),
-      Duration.zero,
-      EnginePhase.layout, // so that we don't try to paint the fake images
+      duration: Duration.zero,
+      phase: EnginePhase.layout, // so that we don't try to paint the fake images
     );
+
     await tester.pumpWidget(
       Directionality(
         textDirection: TextDirection.ltr,
         child: Image(
-          image: TestImageProvider(testImage),
+          image: provider,
           alignment: Alignment.centerRight,
         ),
       ),
-      Duration.zero,
-      EnginePhase.layout, // so that we don't try to paint the fake images
+      duration: Duration.zero,
+      phase: EnginePhase.layout, // so that we don't try to paint the fake images
     );
+
+    imageCache.clear();
   });
 }

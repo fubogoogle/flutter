@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+/// @docImport 'package:flutter/material.dart';
+library;
+
 import 'framework.dart';
 
 // Examples can assume:
@@ -64,8 +67,6 @@ abstract class InheritedTheme extends InheritedWidget {
   /// the wrapped `child` - unless this method is called again to re-wrap the
   /// child.
   static Widget captureAll(BuildContext context, Widget child, {BuildContext? to}) {
-    assert(child != null);
-    assert(context != null);
 
     return capture(from: context, to: to).wrap(child);
   }
@@ -88,7 +89,6 @@ abstract class InheritedTheme extends InheritedWidget {
   /// This method can be expensive if there are many widgets between `from` and
   /// `to` (it walks the element tree between those nodes).
   static CapturedThemes capture({ required BuildContext from, required BuildContext? to }) {
-    assert(from != null);
 
     if (from == to) {
       // Nothing to capture.
@@ -110,8 +110,7 @@ abstract class InheritedTheme extends InheritedWidget {
         }());
         return false;
       }
-      if (ancestor is InheritedElement && ancestor.widget is InheritedTheme) {
-        final InheritedTheme theme = ancestor.widget as InheritedTheme;
+      if (ancestor case InheritedElement(widget: final InheritedTheme theme)) {
         final Type themeType = theme.runtimeType;
         // Only remember the first theme of any type. This assumes
         // that inherited themes completely shadow ancestors of the
@@ -148,7 +147,7 @@ class _CaptureAll extends StatelessWidget {
   const _CaptureAll({
     required this.themes,
     required this.child,
-  }) : assert(themes != null), assert(child != null);
+  });
 
   final List<InheritedTheme> themes;
   final Widget child;

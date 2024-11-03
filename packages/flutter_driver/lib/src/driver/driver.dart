@@ -2,6 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+/// @docImport 'package:flutter/services.dart';
+/// @docImport 'package:flutter/widgets.dart';
+/// @docImport 'package:flutter_driver/driver_extension.dart';
+
+/// @docImport 'package:flutter_test/flutter_test.dart';
+library;
+
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:meta/meta.dart';
@@ -19,6 +27,7 @@ import '../common/layer_tree.dart';
 import '../common/message.dart';
 import '../common/render_tree.dart';
 import '../common/request_data.dart';
+import '../common/screenshot.dart';
 import '../common/semantics.dart';
 import '../common/text.dart';
 import '../common/text_input_action.dart';
@@ -27,6 +36,7 @@ import 'timeline.dart';
 import 'vmservice_driver.dart';
 import 'web_driver.dart';
 
+export '../common/screenshot.dart' show ScreenshotFormat;
 export 'vmservice_driver.dart';
 export 'web_driver.dart';
 
@@ -82,6 +92,11 @@ const CommonFinders find = CommonFinders._();
 ///
 /// See also [FlutterDriver.waitFor].
 typedef EvaluatorFunction = dynamic Function();
+
+// Examples can assume:
+// import 'package:flutter_driver/flutter_driver.dart';
+// import 'package:test/test.dart';
+// late FlutterDriver driver;
 
 /// Drives a Flutter Application running in another process.
 abstract class FlutterDriver {
@@ -173,15 +188,6 @@ abstract class FlutterDriver {
 
   /// Getter of webDriver.
   async_io.WebDriver get webDriver => throw UnimplementedError();
-
-  /// Enables accessibility feature.
-  @Deprecated(
-    'Call setSemantics(true) instead. '
-    'This feature was deprecated after v2.3.0-12.1.pre.'
-  )
-  Future<void> enableAccessibility() async {
-    await setSemantics(true);
-  }
 
   /// Sends [command] to the Flutter Driver extensions.
   /// This must be implemented by subclass.
@@ -432,11 +438,6 @@ abstract class FlutterDriver {
     double dyScroll = 0.0,
     Duration? timeout,
   }) async {
-    assert(scrollable != null);
-    assert(item != null);
-    assert(alignment != null);
-    assert(dxScroll != null);
-    assert(dyScroll != null);
     assert(dxScroll != 0.0 || dyScroll != 0.0);
 
     // Kick off an (unawaited) waitFor that will complete when the item we're
@@ -483,7 +484,7 @@ abstract class FlutterDriver {
   ///
   /// ```dart
   /// test('enters text in a text field', () async {
-  ///   var textField = find.byValueKey('enter-text-field');
+  ///   final SerializableFinder textField = find.byValueKey('enter-text-field');
   ///   await driver.tap(textField);  // acquire focus
   ///   await driver.enterText('Hello!');  // enter text
   ///   await driver.waitFor(find.text('Hello!'));  // verify text appears on UI
@@ -509,7 +510,6 @@ abstract class FlutterDriver {
   /// invoked when the widget is focused, as the [SystemChannels.textInput]
   /// channel will be mocked out.
   Future<void> setTextEntryEmulation({ required bool enabled, Duration? timeout }) async {
-    assert(enabled != null);
     await sendCommand(SetTextEntryEmulation(enabled, timeout: timeout));
   }
 
@@ -526,7 +526,7 @@ abstract class FlutterDriver {
   ///
   /// ```dart
   /// test('submit text in a text field', () async {
-  ///   var textField = find.byValueKey('enter-text-field');
+  ///   final SerializableFinder textField = find.byValueKey('enter-text-field');
   ///   await driver.tap(textField);  // acquire focus
   ///   await driver.enterText('Hello!');  // enter text
   ///   await driver.waitFor(find.text('Hello!'));  // verify text appears on UI
@@ -537,7 +537,6 @@ abstract class FlutterDriver {
   ///
   Future<void> sendTextInputAction(TextInputAction action,
       {Duration? timeout}) async {
-    assert(action != null);
     await sendCommand(SendTextInputAction(action, timeout: timeout));
   }
 
@@ -634,8 +633,10 @@ abstract class FlutterDriver {
   /// In practice, sometimes the device gets really busy for a while and even
   /// two seconds isn't enough, which means that this is still racy and a source
   /// of flakes.
-  Future<List<int>> screenshot() async {
-    throw UnimplementedError();
+  Future<List<int>> screenshot({ScreenshotFormat format = ScreenshotFormat.png}) async {
+    await Future<void>.delayed(const Duration(seconds: 2));
+    final Map<String, Object?> jsonResponse = await sendCommand(ScreenshotCommand(format: format));
+    return base64.decode(jsonResponse['data']! as String);
   }
 
   /// Returns the Flags set in the Dart VM as JSON.
@@ -773,7 +774,7 @@ abstract class FlutterDriver {
 class CommonFinders {
   const CommonFinders._();
 
-  /// Finds [widgets.Text] and [widgets.EditableText] widgets containing string
+  /// Finds [Text] and [EditableText] widgets containing string
   /// equal to [text].
   SerializableFinder text(String text) => ByText(text);
 

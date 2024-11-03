@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+/// @docImport 'package:flutter/cupertino.dart';
+/// @docImport 'package:flutter/material.dart';
+library;
+
 import 'dart:ui' as ui show lerpDouble;
 
 import 'package:flutter/foundation.dart';
@@ -87,9 +91,8 @@ abstract class AlignmentGeometry {
   ///
   /// {@macro dart.ui.shadow.lerp}
   static AlignmentGeometry? lerp(AlignmentGeometry? a, AlignmentGeometry? b, double t) {
-    assert(t != null);
-    if (a == null && b == null) {
-      return null;
+    if (identical(a, b)) {
+      return a;
     }
     if (a == null) {
       return b! * t;
@@ -186,11 +189,7 @@ abstract class AlignmentGeometry {
 ///    whether the horizontal direction depends on the [TextDirection].
 class Alignment extends AlignmentGeometry {
   /// Creates an alignment.
-  ///
-  /// The [x] and [y] arguments must not be null.
-  const Alignment(this.x, this.y)
-    : assert(x != null),
-      assert(y != null);
+  const Alignment(this.x, this.y);
 
   /// The distance fraction in the horizontal direction.
   ///
@@ -340,9 +339,8 @@ class Alignment extends AlignmentGeometry {
   ///
   /// {@macro dart.ui.shadow.lerp}
   static Alignment? lerp(Alignment? a, Alignment? b, double t) {
-    assert(t != null);
-    if (a == null && b == null) {
-      return null;
+    if (identical(a, b)) {
+      return a;
     }
     if (a == null) {
       return Alignment(ui.lerpDouble(0.0, b!.x, t)!, ui.lerpDouble(0.0, b.y, t)!);
@@ -357,35 +355,18 @@ class Alignment extends AlignmentGeometry {
   Alignment resolve(TextDirection? direction) => this;
 
   static String _stringify(double x, double y) {
-    if (x == -1.0 && y == -1.0) {
-      return 'Alignment.topLeft';
-    }
-    if (x == 0.0 && y == -1.0) {
-      return 'Alignment.topCenter';
-    }
-    if (x == 1.0 && y == -1.0) {
-      return 'Alignment.topRight';
-    }
-    if (x == -1.0 && y == 0.0) {
-      return 'Alignment.centerLeft';
-    }
-    if (x == 0.0 && y == 0.0) {
-      return 'Alignment.center';
-    }
-    if (x == 1.0 && y == 0.0) {
-      return 'Alignment.centerRight';
-    }
-    if (x == -1.0 && y == 1.0) {
-      return 'Alignment.bottomLeft';
-    }
-    if (x == 0.0 && y == 1.0) {
-      return 'Alignment.bottomCenter';
-    }
-    if (x == 1.0 && y == 1.0) {
-      return 'Alignment.bottomRight';
-    }
-    return 'Alignment(${x.toStringAsFixed(1)}, '
-                     '${y.toStringAsFixed(1)})';
+    return switch ((x, y)) {
+      (-1.0, -1.0) => 'Alignment.topLeft',
+      ( 0.0, -1.0) => 'Alignment.topCenter',
+      ( 1.0, -1.0) => 'Alignment.topRight',
+      (-1.0,  0.0) => 'Alignment.centerLeft',
+      ( 0.0,  0.0) => 'Alignment.center',
+      ( 1.0,  0.0) => 'Alignment.centerRight',
+      (-1.0,  1.0) => 'Alignment.bottomLeft',
+      ( 0.0,  1.0) => 'Alignment.bottomCenter',
+      ( 1.0,  1.0) => 'Alignment.bottomRight',
+      _ => 'Alignment(${x.toStringAsFixed(1)}, ${y.toStringAsFixed(1)})',
+    };
   }
 
   @override
@@ -405,11 +386,7 @@ class Alignment extends AlignmentGeometry {
 ///    whose horizontal component does not depend on the text direction).
 class AlignmentDirectional extends AlignmentGeometry {
   /// Creates a directional alignment.
-  ///
-  /// The [start] and [y] arguments must not be null.
-  const AlignmentDirectional(this.start, this.y)
-    : assert(start != null),
-      assert(y != null);
+  const AlignmentDirectional(this.start, this.y);
 
   /// The distance fraction in the horizontal direction.
   ///
@@ -534,9 +511,8 @@ class AlignmentDirectional extends AlignmentGeometry {
   ///
   /// {@macro dart.ui.shadow.lerp}
   static AlignmentDirectional? lerp(AlignmentDirectional? a, AlignmentDirectional? b, double t) {
-    assert(t != null);
-    if (a == null && b == null) {
-      return null;
+    if (identical(a, b)) {
+      return a;
     }
     if (a == null) {
       return AlignmentDirectional(ui.lerpDouble(0.0, b!.start, t)!, ui.lerpDouble(0.0, b.y, t)!);
@@ -550,44 +526,25 @@ class AlignmentDirectional extends AlignmentGeometry {
   @override
   Alignment resolve(TextDirection? direction) {
     assert(direction != null, 'Cannot resolve $runtimeType without a TextDirection.');
-    switch (direction!) {
-      case TextDirection.rtl:
-        return Alignment(-start, y);
-      case TextDirection.ltr:
-        return Alignment(start, y);
-    }
+    return switch (direction!) {
+      TextDirection.rtl => Alignment(-start, y),
+      TextDirection.ltr => Alignment(start, y),
+    };
   }
 
   static String _stringify(double start, double y) {
-    if (start == -1.0 && y == -1.0) {
-      return 'AlignmentDirectional.topStart';
-    }
-    if (start == 0.0 && y == -1.0) {
-      return 'AlignmentDirectional.topCenter';
-    }
-    if (start == 1.0 && y == -1.0) {
-      return 'AlignmentDirectional.topEnd';
-    }
-    if (start == -1.0 && y == 0.0) {
-      return 'AlignmentDirectional.centerStart';
-    }
-    if (start == 0.0 && y == 0.0) {
-      return 'AlignmentDirectional.center';
-    }
-    if (start == 1.0 && y == 0.0) {
-      return 'AlignmentDirectional.centerEnd';
-    }
-    if (start == -1.0 && y == 1.0) {
-      return 'AlignmentDirectional.bottomStart';
-    }
-    if (start == 0.0 && y == 1.0) {
-      return 'AlignmentDirectional.bottomCenter';
-    }
-    if (start == 1.0 && y == 1.0) {
-      return 'AlignmentDirectional.bottomEnd';
-    }
-    return 'AlignmentDirectional(${start.toStringAsFixed(1)}, '
-                                '${y.toStringAsFixed(1)})';
+    return switch ((start, y)) {
+      (-1.0, -1.0) => 'AlignmentDirectional.topStart',
+      ( 0.0, -1.0) => 'AlignmentDirectional.topCenter',
+      ( 1.0, -1.0) => 'AlignmentDirectional.topEnd',
+      (-1.0,  0.0) => 'AlignmentDirectional.centerStart',
+      ( 0.0,  0.0) => 'AlignmentDirectional.center',
+      ( 1.0,  0.0) => 'AlignmentDirectional.centerEnd',
+      (-1.0,  1.0) => 'AlignmentDirectional.bottomStart',
+      ( 0.0,  1.0) => 'AlignmentDirectional.bottomCenter',
+      ( 1.0,  1.0) => 'AlignmentDirectional.bottomEnd',
+      _ => 'AlignmentDirectional(${start.toStringAsFixed(1)}, ${y.toStringAsFixed(1)})',
+    };
   }
 
   @override
@@ -654,12 +611,10 @@ class _MixedAlignment extends AlignmentGeometry {
   @override
   Alignment resolve(TextDirection? direction) {
     assert(direction != null, 'Cannot resolve $runtimeType without a TextDirection.');
-    switch (direction!) {
-      case TextDirection.rtl:
-        return Alignment(_x - _start, _y);
-      case TextDirection.ltr:
-        return Alignment(_x + _start, _y);
-    }
+    return switch (direction!) {
+      TextDirection.rtl => Alignment(_x - _start, _y),
+      TextDirection.ltr => Alignment(_x + _start, _y),
+    };
   }
 }
 
@@ -682,8 +637,7 @@ class TextAlignVertical {
   /// Creates a TextAlignVertical from any y value between -1.0 and 1.0.
   const TextAlignVertical({
     required this.y,
-  }) : assert(y != null),
-       assert(y >= -1.0 && y <= 1.0);
+  }) : assert(y >= -1.0 && y <= 1.0);
 
   /// A value ranging from -1.0 to 1.0 that defines the topmost and bottommost
   /// locations of the top and bottom of the input box.
