@@ -11,22 +11,19 @@ const String _kIndirectInputEventsKey = 'UIApplicationSupportsIndirectInputEvent
 
 /// Update Info.plist.
 class HostAppInfoPlistMigration extends ProjectMigrator {
-  HostAppInfoPlistMigration(
-    IosProject project,
-    super.logger,
-  ) : _infoPlist = project.defaultHostInfoPlist;
+  HostAppInfoPlistMigration(IosProject project, super.logger)
+    : _infoPlist = project.defaultHostInfoPlist;
 
   final File _infoPlist;
 
   @override
-  bool migrate() {
+  Future<void> migrate() async {
     if (!_infoPlist.existsSync()) {
       logger.printTrace('Info.plist not found, skipping host app Info.plist migration.');
-      return true;
+      return;
     }
 
     processFileLines(_infoPlist);
-    return true;
   }
 
   @override

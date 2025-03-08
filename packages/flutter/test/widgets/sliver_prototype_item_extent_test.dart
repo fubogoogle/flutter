@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class TestItem extends StatelessWidget {
-  const TestItem({ super.key, required this.item, this.width, this.height });
+  const TestItem({super.key, required this.item, this.width, this.height});
   final int item;
   final double? width;
   final double? height;
@@ -22,7 +21,13 @@ class TestItem extends StatelessWidget {
   }
 }
 
-Widget buildFrame({ int? count, double? width, double? height, Axis? scrollDirection, Key? prototypeKey }) {
+Widget buildFrame({
+  int? count,
+  double? width,
+  double? height,
+  Axis? scrollDirection,
+  Key? prototypeKey,
+}) {
   return Directionality(
     textDirection: TextDirection.ltr,
     child: CustomScrollView(
@@ -41,6 +46,71 @@ Widget buildFrame({ int? count, double? width, double? height, Axis? scrollDirec
 }
 
 void main() {
+  testWidgets('SliverPrototypeExtentList.builder test', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CustomScrollView(
+            slivers: <Widget>[
+              SliverPrototypeExtentList.builder(
+                itemBuilder: (BuildContext context, int index) => TestItem(item: index),
+                prototypeItem: const TestItem(item: -1, height: 100.0),
+                itemCount: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // The viewport is 600 pixels high, lazily created items are 100 pixels high.
+    for (int i = 0; i < 6; i += 1) {
+      final Finder item = find.widgetWithText(Container, 'Item $i');
+      expect(item, findsOneWidget);
+      expect(tester.getTopLeft(item).dy, i * 100.0);
+      expect(tester.getSize(item).height, 100.0);
+    }
+    for (int i = 7; i < 20; i += 1) {
+      expect(find.text('Item $i'), findsNothing);
+    }
+  });
+
+  testWidgets('SliverPrototypeExtentList.builder test', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CustomScrollView(
+            slivers: <Widget>[
+              SliverPrototypeExtentList.list(
+                prototypeItem: const TestItem(item: -1, height: 100.0),
+                children:
+                    <int>[
+                      0,
+                      1,
+                      2,
+                      3,
+                      4,
+                      5,
+                      6,
+                      7,
+                    ].map((int index) => TestItem(item: index)).toList(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // The viewport is 600 pixels high, lazily created items are 100 pixels high.
+    for (int i = 0; i < 6; i += 1) {
+      final Finder item = find.widgetWithText(Container, 'Item $i');
+      expect(item, findsOneWidget);
+      expect(tester.getTopLeft(item).dy, i * 100.0);
+      expect(tester.getSize(item).height, 100.0);
+    }
+    expect(find.text('Item 7'), findsNothing);
+  });
+
   testWidgets('SliverPrototypeExtentList vertical scrolling basics', (WidgetTester tester) async {
     await tester.pumpWidget(buildFrame(count: 20, height: 100.0));
 
@@ -119,10 +189,13 @@ void main() {
     }
   });
 
-  testWidgets('SliverPrototypeExtentList first item is also the prototype', (WidgetTester tester) async {
-    final List<Widget> items = List<Widget>.generate(10, (int index) {
-      return TestItem(key: ValueKey<int>(index), item: index, height: index == 0 ? 60.0 : null);
-    }).toList();
+  testWidgets('SliverPrototypeExtentList first item is also the prototype', (
+    WidgetTester tester,
+  ) async {
+    final List<Widget> items =
+        List<Widget>.generate(10, (int index) {
+          return TestItem(key: ValueKey<int>(index), item: index, height: index == 0 ? 60.0 : null);
+        }).toList();
 
     await tester.pumpWidget(
       Directionality(
@@ -149,7 +222,9 @@ void main() {
     }
   });
 
-  testWidgets('SliverPrototypeExtentList prototypeItem paint transform is zero.', (WidgetTester tester) async {
+  testWidgets('SliverPrototypeExtentList prototypeItem paint transform is zero.', (
+    WidgetTester tester,
+  ) async {
     // Regression test for https://github.com/flutter/flutter/issues/67117
     // This test ensures that the SliverPrototypeExtentList does not cause an
     // assertion error when calculating the paint transform of its prototypeItem.

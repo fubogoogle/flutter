@@ -23,18 +23,23 @@ class TestImageProvider extends ImageProvider<TestImageProvider> {
   }
 
   @override
-  void resolveStreamForKey(ImageConfiguration config, ImageStream stream, TestImageProvider key, ImageErrorListener handleError) {
+  void resolveStreamForKey(
+    ImageConfiguration config,
+    ImageStream stream,
+    TestImageProvider key,
+    ImageErrorListener handleError,
+  ) {
     configuration = config;
     super.resolveStreamForKey(config, stream, key, handleError);
   }
 
   @override
-  ImageStreamCompleter load(TestImageProvider key, DecoderCallback decode) {
-    throw UnsupportedError('Use ImageProvider.loadBuffer instead.');
+  ImageStreamCompleter loadBuffer(TestImageProvider key, DecoderBufferCallback decode) {
+    throw UnsupportedError('Use ImageProvider.loadImage instead.');
   }
 
   @override
-  ImageStreamCompleter loadBuffer(TestImageProvider key, DecoderBufferCallback decode) {
+  ImageStreamCompleter loadImage(TestImageProvider key, ImageDecoderCallback decode) {
     loadCallCount += 1;
     return OneFrameImageStreamCompleter(_completer.future);
   }

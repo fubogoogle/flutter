@@ -9,17 +9,11 @@ class TextPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
+    return const Material(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: const <Widget>[
-          SizedBox(
-            width: 200,
-            height: 100,
-            child: TextField(
-              key: Key('basic-textfield'),
-            ),
-          ),
+        children: <Widget>[
+          SizedBox(width: 200, height: 100, child: TextField(key: Key('basic-textfield'))),
         ],
       ),
     );

@@ -15,10 +15,12 @@ class XcodeScriptBuildPhaseMigration extends ProjectMigrator {
   final File _xcodeProjectInfoFile;
 
   @override
-  bool migrate() {
+  Future<void> migrate() async {
     if (!_xcodeProjectInfoFile.existsSync()) {
-      logger.printTrace('Xcode project not found, skipping script build phase dependency analysis removal.');
-      return true;
+      logger.printTrace(
+        'Xcode project not found, skipping script build phase dependency analysis removal.',
+      );
+      return;
     }
 
     final String originalProjectContents = _xcodeProjectInfoFile.readAsStringSync();
@@ -50,12 +52,14 @@ class XcodeScriptBuildPhaseMigration extends ProjectMigrator {
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 ''';
-      newProjectContents = newProjectContents.replaceAll(scriptBuildPhaseOriginal, scriptBuildPhaseReplacement);
+      newProjectContents = newProjectContents.replaceAll(
+        scriptBuildPhaseOriginal,
+        scriptBuildPhaseReplacement,
+      );
     }
     if (originalProjectContents != newProjectContents) {
       logger.printStatus('Removing script build phase dependency analysis.');
       _xcodeProjectInfoFile.writeAsStringSync(newProjectContents);
     }
-    return true;
   }
 }

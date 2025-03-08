@@ -2,32 +2,45 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:developer';
+/// @docImport 'dart:ui';
+///
+/// @docImport 'package:flutter/widgets.dart';
+///
+/// @docImport 'box.dart';
+/// @docImport 'paragraph.dart';
+/// @docImport 'proxy_box.dart';
+/// @docImport 'view.dart';
+/// @docImport 'viewport.dart';
+library;
+
 import 'dart:ui' as ui show PictureRecorder;
 
 import 'package:flutter/animation.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/painting.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/semantics.dart';
 
+import 'binding.dart';
 import 'debug.dart';
 import 'layer.dart';
 
-export 'package:flutter/foundation.dart' show
-  DiagnosticPropertiesBuilder,
-  DiagnosticsNode,
-  DiagnosticsProperty,
-  DoubleProperty,
-  EnumProperty,
-  ErrorDescription,
-  ErrorHint,
-  ErrorSummary,
-  FlagProperty,
-  FlutterError,
-  InformationCollector,
-  IntProperty,
-  StringProperty;
+export 'package:flutter/foundation.dart'
+    show
+        DiagnosticPropertiesBuilder,
+        DiagnosticsNode,
+        DiagnosticsProperty,
+        DoubleProperty,
+        EnumProperty,
+        ErrorDescription,
+        ErrorHint,
+        ErrorSummary,
+        FlagProperty,
+        FlutterError,
+        InformationCollector,
+        IntProperty,
+        StringProperty;
 export 'package:flutter/gestures.dart' show HitTestEntry, HitTestResult;
 export 'package:flutter/painting.dart';
 
@@ -45,7 +58,7 @@ class ParentData {
   /// Called when the RenderObject is removed from the tree.
   @protected
   @mustCallSuper
-  void detach() { }
+  void detach() {}
 
   @override
   String toString() => '<none>';
@@ -75,15 +88,12 @@ typedef PaintingContextCallback = void Function(PaintingContext context, Offset 
 /// New [PaintingContext] objects are created automatically when using
 /// [PaintingContext.repaintCompositedChild] and [pushLayer].
 class PaintingContext extends ClipContext {
-
   /// Creates a painting context.
   ///
   /// Typically only called by [PaintingContext.repaintCompositedChild]
   /// and [pushLayer].
   @protected
-  PaintingContext(this._containerLayer, this.estimatedBounds)
-    : assert(_containerLayer != null),
-      assert(estimatedBounds != null);
+  PaintingContext(this._containerLayer, this.estimatedBounds);
 
   final ContainerLayer _containerLayer;
 
@@ -106,12 +116,9 @@ class PaintingContext extends ClipContext {
   ///
   ///  * [RenderObject.isRepaintBoundary], which determines if a [RenderObject]
   ///    has a composited layer.
-  static void repaintCompositedChild(RenderObject child, { bool debugAlsoPaintedParent = false }) {
+  static void repaintCompositedChild(RenderObject child, {bool debugAlsoPaintedParent = false}) {
     assert(child._needsPaint);
-    _repaintCompositedChild(
-      child,
-      debugAlsoPaintedParent: debugAlsoPaintedParent,
-    );
+    _repaintCompositedChild(child, debugAlsoPaintedParent: debugAlsoPaintedParent);
   }
 
   static void _repaintCompositedChild(
@@ -148,10 +155,11 @@ class PaintingContext extends ClipContext {
       }());
       childLayer.removeAllChildren();
       final OffsetLayer updatedLayer = child.updateCompositedLayer(oldLayer: childLayer);
-      assert(identical(updatedLayer, childLayer),
+      assert(
+        identical(updatedLayer, childLayer),
         '$child created a new layer instance $updatedLayer instead of reusing the '
         'existing layer $childLayer. See the documentation of RenderObject.updateCompositedLayer '
-        'for more information on how to correctly implement this method.'
+        'for more information on how to correctly implement this method.',
       );
       assert(debugOldOffset == updatedLayer.offset);
     }
@@ -196,10 +204,11 @@ class PaintingContext extends ClipContext {
       return true;
     }());
     final OffsetLayer updatedLayer = child.updateCompositedLayer(oldLayer: childLayer);
-    assert(identical(updatedLayer, childLayer),
+    assert(
+      identical(updatedLayer, childLayer),
       '$child created a new layer instance $updatedLayer instead of reusing the '
       'existing layer $childLayer. See the documentation of RenderObject.updateCompositedLayer '
-      'for more information on how to correctly implement this method.'
+      'for more information on how to correctly implement this method.',
     );
     assert(debugOldOffset == updatedLayer.offset);
     child._needsCompositedLayerUpdate = false;
@@ -242,8 +251,8 @@ class PaintingContext extends ClipContext {
     if (child.isRepaintBoundary) {
       stopRecordingIfNeeded();
       _compositeChild(child, offset);
-    // If a render object was a repaint boundary but no longer is one, this
-    // is where the framework managed layer is automatically disposed.
+      // If a render object was a repaint boundary but no longer is one, this
+      // is where the framework managed layer is automatically disposed.
     } else if (child._wasRepaintBoundary) {
       assert(child._layerHandle.layer is OffsetLayer);
       child._layerHandle.layer = null;
@@ -333,8 +342,8 @@ class PaintingContext extends ClipContext {
   void _startRecording() {
     assert(!_isRecording);
     _currentLayer = PictureLayer(estimatedBounds);
-    _recorder = ui.PictureRecorder();
-    _canvas = Canvas(_recorder!);
+    _recorder = RendererBinding.instance.createPictureRecorder();
+    _canvas = RendererBinding.instance.createCanvas(_recorder!);
     _containerLayer.append(_currentLayer!);
   }
 
@@ -372,17 +381,19 @@ class PaintingContext extends ClipContext {
     }
     assert(() {
       if (debugRepaintRainbowEnabled) {
-        final Paint paint = Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 6.0
-          ..color = debugCurrentRepaintColor.toColor();
+        final Paint paint =
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 6.0
+              ..color = debugCurrentRepaintColor.toColor();
         canvas.drawRect(estimatedBounds.deflate(3.0), paint);
       }
       if (debugPaintLayerBordersEnabled) {
-        final Paint paint = Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.0
-          ..color = const Color(0xFFFF9800);
+        final Paint paint =
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 1.0
+              ..color = const Color(0xFFFF9800);
         canvas.drawRect(estimatedBounds, paint);
       }
       return true;
@@ -399,8 +410,16 @@ class PaintingContext extends ClipContext {
   /// If this hint is not set, the compositor will apply its own heuristics to
   /// decide whether the current layer is complex enough to benefit from
   /// caching.
+  ///
+  /// Calling this ensures a [Canvas] is available. Only draw calls on the
+  /// current canvas will be hinted; the hint is not propagated to new canvases
+  /// created after a new layer is added to the painting context (e.g. with
+  /// [addLayer] or [pushLayer]).
   void setIsComplexHint() {
-    _currentLayer?.isComplexHint = true;
+    if (_currentLayer == null) {
+      _startRecording();
+    }
+    _currentLayer!.isComplexHint = true;
   }
 
   /// Hints that the painting in the current layer is likely to change next frame.
@@ -409,8 +428,16 @@ class PaintingContext extends ClipContext {
   /// cache will not be used in the future. If this hint is not set, the
   /// compositor will apply its own heuristics to decide whether the current
   /// layer is likely to be reused in the future.
+  ///
+  /// Calling this ensures a [Canvas] is available. Only draw calls on the
+  /// current canvas will be hinted; the hint is not propagated to new canvases
+  /// created after a new layer is added to the painting context (e.g. with
+  /// [addLayer] or [pushLayer]).
   void setWillChangeHint() {
-    _currentLayer?.willChangeHint = true;
+    if (_currentLayer == null) {
+      _startRecording();
+    }
+    _currentLayer!.willChangeHint = true;
   }
 
   /// Adds a composited leaf layer to the recording.
@@ -459,8 +486,12 @@ class PaintingContext extends ClipContext {
   ///
   ///  * [addLayer], for pushing a layer without painting further contents
   ///    within it.
-  void pushLayer(ContainerLayer childLayer, PaintingContextCallback painter, Offset offset, { Rect? childPaintBounds }) {
-    assert(painter != null);
+  void pushLayer(
+    ContainerLayer childLayer,
+    PaintingContextCallback painter,
+    Offset offset, {
+    Rect? childPaintBounds,
+  }) {
     // If a layer is being reused, it may already contain children. We remove
     // them so that `painter` can add children that are relevant for this frame.
     if (childLayer.hasChildren) {
@@ -468,7 +499,10 @@ class PaintingContext extends ClipContext {
     }
     stopRecordingIfNeeded();
     appendLayer(childLayer);
-    final PaintingContext childContext = createChildContext(childLayer, childPaintBounds ?? estimatedBounds);
+    final PaintingContext childContext = createChildContext(
+      childLayer,
+      childPaintBounds ?? estimatedBounds,
+    );
 
     painter(childContext, offset);
     childContext.stopRecordingIfNeeded();
@@ -519,7 +553,14 @@ class PaintingContext extends ClipContext {
   /// compositing) or until the render object changes the type of the layer
   /// (e.g. from opacity layer to a clip rect layer).
   /// {@endtemplate}
-  ClipRectLayer? pushClipRect(bool needsCompositing, Offset offset, Rect clipRect, PaintingContextCallback painter, { Clip clipBehavior = Clip.hardEdge, ClipRectLayer? oldLayer }) {
+  ClipRectLayer? pushClipRect(
+    bool needsCompositing,
+    Offset offset,
+    Rect clipRect,
+    PaintingContextCallback painter, {
+    Clip clipBehavior = Clip.hardEdge,
+    ClipRectLayer? oldLayer,
+  }) {
     if (clipBehavior == Clip.none) {
       painter(this, offset);
       return null;
@@ -557,8 +598,15 @@ class PaintingContext extends ClipContext {
   /// The `clipBehavior` argument controls how the rounded rectangle is clipped.
   ///
   /// {@macro flutter.rendering.PaintingContext.pushClipRect.oldLayer}
-  ClipRRectLayer? pushClipRRect(bool needsCompositing, Offset offset, Rect bounds, RRect clipRRect, PaintingContextCallback painter, { Clip clipBehavior = Clip.antiAlias, ClipRRectLayer? oldLayer }) {
-    assert(clipBehavior != null);
+  ClipRRectLayer? pushClipRRect(
+    bool needsCompositing,
+    Offset offset,
+    Rect bounds,
+    RRect clipRRect,
+    PaintingContextCallback painter, {
+    Clip clipBehavior = Clip.antiAlias,
+    ClipRRectLayer? oldLayer,
+  }) {
     if (clipBehavior == Clip.none) {
       painter(this, offset);
       return null;
@@ -574,6 +622,60 @@ class PaintingContext extends ClipContext {
       return layer;
     } else {
       clipRRectAndPaint(offsetClipRRect, clipBehavior, offsetBounds, () => painter(this, offset));
+      return null;
+    }
+  }
+
+  /// Clip further painting using a rounded superellipse.
+  ///
+  /// {@macro flutter.rendering.PaintingContext.pushClipRect.needsCompositing}
+  ///
+  /// {@macro flutter.rendering.PaintingContext.pushClipRect.offset}
+  ///
+  /// The `bounds` argument is used to specify the region of the canvas (in the
+  /// caller's coordinate system) into which `painter` will paint.
+  ///
+  /// The `clipRSuperellipse` argument specifies the rounded-superellipse (in the caller's
+  /// coordinate system) to use to clip the painting done by `painter`. It
+  /// should not include the `offset`.
+  ///
+  /// The `painter` callback will be called while the `clipRSuperellipse` is applied. It
+  /// is called synchronously during the call to [pushClipRSuperellipse].
+  ///
+  /// The `clipBehavior` argument controls how the rounded rectangle is clipped.
+  ///
+  /// Hit tests are performed based on the bounding box of the [RSuperellipse].
+  ///
+  /// {@macro flutter.rendering.PaintingContext.pushClipRect.oldLayer}
+  ClipRSuperellipseLayer? pushClipRSuperellipse(
+    bool needsCompositing,
+    Offset offset,
+    Rect bounds,
+    RSuperellipse clipRSuperellipse,
+    PaintingContextCallback painter, {
+    Clip clipBehavior = Clip.antiAlias,
+    ClipRSuperellipseLayer? oldLayer,
+  }) {
+    if (clipBehavior == Clip.none) {
+      painter(this, offset);
+      return null;
+    }
+    final Rect offsetBounds = bounds.shift(offset);
+    final RSuperellipse offsetShape = clipRSuperellipse.shift(offset);
+    if (needsCompositing) {
+      final ClipRSuperellipseLayer layer = oldLayer ?? ClipRSuperellipseLayer();
+      layer
+        ..clipRSuperellipse = offsetShape
+        ..clipBehavior = clipBehavior;
+      pushLayer(layer, painter, offset, childPaintBounds: offsetBounds);
+      return layer;
+    } else {
+      clipRSuperellipseAndPaint(
+        offsetShape,
+        clipBehavior,
+        offsetBounds,
+        () => painter(this, offset),
+      );
       return null;
     }
   }
@@ -597,8 +699,15 @@ class PaintingContext extends ClipContext {
   /// The `clipBehavior` argument controls how the path is clipped.
   ///
   /// {@macro flutter.rendering.PaintingContext.pushClipRect.oldLayer}
-  ClipPathLayer? pushClipPath(bool needsCompositing, Offset offset, Rect bounds, Path clipPath, PaintingContextCallback painter, { Clip clipBehavior = Clip.antiAlias, ClipPathLayer? oldLayer }) {
-    assert(clipBehavior != null);
+  ClipPathLayer? pushClipPath(
+    bool needsCompositing,
+    Offset offset,
+    Rect bounds,
+    Path clipPath,
+    PaintingContextCallback painter, {
+    Clip clipBehavior = Clip.antiAlias,
+    ClipPathLayer? oldLayer,
+  }) {
     if (clipBehavior == Clip.none) {
       painter(this, offset);
       return null;
@@ -634,8 +743,12 @@ class PaintingContext extends ClipContext {
   /// [RenderObject.alwaysNeedsCompositing] property to return true. That informs
   /// ancestor render objects that this render object will include a composited
   /// layer, which, for example, causes them to use composited clips.
-  ColorFilterLayer pushColorFilter(Offset offset, ColorFilter colorFilter, PaintingContextCallback painter, { ColorFilterLayer? oldLayer }) {
-    assert(colorFilter != null);
+  ColorFilterLayer pushColorFilter(
+    Offset offset,
+    ColorFilter colorFilter,
+    PaintingContextCallback painter, {
+    ColorFilterLayer? oldLayer,
+  }) {
     final ColorFilterLayer layer = oldLayer ?? ColorFilterLayer();
     layer.colorFilter = colorFilter;
     pushLayer(layer, painter, offset);
@@ -657,9 +770,17 @@ class PaintingContext extends ClipContext {
   /// is called synchronously during the call to [pushTransform].
   ///
   /// {@macro flutter.rendering.PaintingContext.pushClipRect.oldLayer}
-  TransformLayer? pushTransform(bool needsCompositing, Offset offset, Matrix4 transform, PaintingContextCallback painter, { TransformLayer? oldLayer }) {
-    final Matrix4 effectiveTransform = Matrix4.translationValues(offset.dx, offset.dy, 0.0)
-      ..multiply(transform)..translate(-offset.dx, -offset.dy);
+  TransformLayer? pushTransform(
+    bool needsCompositing,
+    Offset offset,
+    Matrix4 transform,
+    PaintingContextCallback painter, {
+    TransformLayer? oldLayer,
+  }) {
+    final Matrix4 effectiveTransform =
+        Matrix4.translationValues(offset.dx, offset.dy, 0.0)
+          ..multiply(transform)
+          ..translate(-offset.dx, -offset.dy);
     if (needsCompositing) {
       final TransformLayer layer = oldLayer ?? TransformLayer();
       layer.transform = effectiveTransform;
@@ -698,7 +819,12 @@ class PaintingContext extends ClipContext {
   /// [RenderObject.alwaysNeedsCompositing] property to return true. That informs
   /// ancestor render objects that this render object will include a composited
   /// layer, which, for example, causes them to use composited clips.
-  OpacityLayer pushOpacity(Offset offset, int alpha, PaintingContextCallback painter, { OpacityLayer? oldLayer }) {
+  OpacityLayer pushOpacity(
+    Offset offset,
+    int alpha,
+    PaintingContextCallback painter, {
+    OpacityLayer? oldLayer,
+  }) {
     final OpacityLayer layer = oldLayer ?? OpacityLayer();
     layer
       ..alpha = alpha
@@ -708,7 +834,8 @@ class PaintingContext extends ClipContext {
   }
 
   @override
-  String toString() => '${objectRuntimeType(this, 'PaintingContext')}#$hashCode(layer: $_containerLayer, canvas bounds: $estimatedBounds)';
+  String toString() =>
+      '${objectRuntimeType(this, 'PaintingContext')}#$hashCode(layer: $_containerLayer, canvas bounds: $estimatedBounds)';
 }
 
 /// An abstract set of layout constraints.
@@ -802,8 +929,6 @@ abstract class Constraints {
 /// Signature for a function that is called for each [RenderObject].
 ///
 /// Used by [RenderObject.visitChildren] and [RenderObject.visitChildrenForSemantics].
-///
-/// The `child` argument must not be null.
 typedef RenderObjectVisitor = void Function(RenderObject child);
 
 /// Signature for a function that is called during layout.
@@ -811,26 +936,9 @@ typedef RenderObjectVisitor = void Function(RenderObject child);
 /// Used by [RenderObject.invokeLayoutCallback].
 typedef LayoutCallback<T extends Constraints> = void Function(T constraints);
 
-/// A reference to the semantics tree.
-///
-/// The framework maintains the semantics tree (used for accessibility and
-/// indexing) only when there is at least one client holding an open
-/// [SemanticsHandle].
-///
-/// The framework notifies the client that it has updated the semantics tree by
-/// calling the [listener] callback. When the client no longer needs the
-/// semantics tree, the client can call [dispose] on the [SemanticsHandle],
-/// which stops these callbacks and closes the [SemanticsHandle]. When all the
-/// outstanding [SemanticsHandle] objects are closed, the framework stops
-/// updating the semantics tree.
-///
-/// To obtain a [SemanticsHandle], call [PipelineOwner.ensureSemantics] on the
-/// [PipelineOwner] for the render tree from which you wish to read semantics.
-/// You can obtain the [PipelineOwner] using the [RenderObject.owner] property.
-class SemanticsHandle {
-  SemanticsHandle._(PipelineOwner owner, this.listener)
-      : assert(owner != null),
-        _owner = owner {
+class _LocalSemanticsHandle implements SemanticsHandle {
+  _LocalSemanticsHandle._(PipelineOwner owner, this.listener) : _owner = owner {
+    assert(debugMaybeDispatchCreated('rendering', '_LocalSemanticsHandle', this));
     if (listener != null) {
       _owner.semanticsOwner!.addListener(listener!);
     }
@@ -841,14 +949,9 @@ class SemanticsHandle {
   /// The callback that will be notified when the semantics tree updates.
   final VoidCallback? listener;
 
-  /// Closes the semantics handle and stops calling [listener] when the
-  /// semantics updates.
-  ///
-  /// When all the outstanding [SemanticsHandle] objects for a given
-  /// [PipelineOwner] are closed, the [PipelineOwner] will stop updating the
-  /// semantics tree.
-  @mustCallSuper
+  @override
   void dispose() {
+    assert(debugMaybeDispatchDisposed(this));
     if (listener != null) {
       _owner.semanticsOwner!.removeListener(listener!);
     }
@@ -885,7 +988,21 @@ class SemanticsHandle {
 /// are visible on screen. You can create other pipeline owners to manage
 /// off-screen objects, which can flush their pipelines independently of the
 /// on-screen render objects.
-class PipelineOwner {
+///
+/// [PipelineOwner]s can be organized in a tree to manage multiple render trees,
+/// where each [PipelineOwner] is responsible for one of the render trees. To
+/// build or modify the tree, call [adoptChild] or [dropChild]. During each of
+/// the different flush phases described above, a [PipelineOwner] will first
+/// perform the phase on the nodes it manages in its own render tree before
+/// calling the same flush method on its children. No assumption must be made
+/// about the order in which child [PipelineOwner]s are flushed.
+///
+/// A [PipelineOwner] may also be [attach]ed to a [PipelineManifold], which
+/// gives it access to platform functionality usually exposed by the bindings
+/// without tying it to a specific binding implementation. All [PipelineOwner]s
+/// in a given tree must be attached to the same [PipelineManifold]. This
+/// happens automatically during [adoptChild].
+base class PipelineOwner with DiagnosticableTreeMixin {
   /// Creates a pipeline owner.
   ///
   /// Typically created by the binding (e.g., [RendererBinding]), but can be
@@ -894,8 +1011,11 @@ class PipelineOwner {
   PipelineOwner({
     this.onNeedVisualUpdate,
     this.onSemanticsOwnerCreated,
+    this.onSemanticsUpdate,
     this.onSemanticsOwnerDisposed,
-  });
+  }) {
+    assert(debugMaybeDispatchCreated('rendering', 'PipelineOwner', this));
+  }
 
   /// Called when a render object associated with this pipeline owner wishes to
   /// update its visual appearance.
@@ -904,6 +1024,10 @@ class PipelineOwner {
   /// various stages of the pipeline. This function might be called multiple
   /// times in quick succession. Implementations should take care to discard
   /// duplicate calls quickly.
+  ///
+  /// When the [PipelineOwner] is attached to a [PipelineManifold] and
+  /// [onNeedVisualUpdate] is provided, the [onNeedVisualUpdate] callback is
+  /// invoked instead of calling [PipelineManifold.requestVisualUpdate].
   final VoidCallback? onNeedVisualUpdate;
 
   /// Called whenever this pipeline owner creates a semantics object.
@@ -911,6 +1035,12 @@ class PipelineOwner {
   /// Typical implementations will schedule the creation of the initial
   /// semantics tree.
   final VoidCallback? onSemanticsOwnerCreated;
+
+  /// Called whenever this pipeline owner's semantics owner emits a [SemanticsUpdate].
+  ///
+  /// Typical implementations will delegate the [SemanticsUpdate] to a [FlutterView]
+  /// that can handle the [SemanticsUpdate].
+  final SemanticsUpdateCallback? onSemanticsUpdate;
 
   /// Called whenever this pipeline owner disposes its semantics owner.
   ///
@@ -922,15 +1052,17 @@ class PipelineOwner {
   /// Used to notify the pipeline owner that an associated render object wishes
   /// to update its visual appearance.
   void requestVisualUpdate() {
-    onNeedVisualUpdate?.call();
+    if (onNeedVisualUpdate != null) {
+      onNeedVisualUpdate!();
+    } else {
+      _manifold?.requestVisualUpdate();
+    }
   }
 
   /// The unique object managed by this pipeline that has no parent.
-  ///
-  /// This object does not have to be a [RenderObject].
-  AbstractNode? get rootNode => _rootNode;
-  AbstractNode? _rootNode;
-  set rootNode(AbstractNode? value) {
+  RenderObject? get rootNode => _rootNode;
+  RenderObject? _rootNode;
+  set rootNode(RenderObject? value) {
     if (_rootNode == value) {
       return;
     }
@@ -964,6 +1096,7 @@ class PipelineOwner {
   /// always returns false.
   bool get debugDoingLayout => _debugDoingLayout;
   bool _debugDoingLayout = false;
+  bool _debugDoingChildLayout = false;
 
   /// Update the layout information for all dirty render objects.
   ///
@@ -984,8 +1117,8 @@ class PipelineOwner {
         }
         return true;
       }());
-      Timeline.startSync(
-        'LAYOUT',
+      FlutterTimeline.startSync(
+        'LAYOUT$_debugRootSuffixForTimelineEventNames',
         arguments: debugTimelineArguments,
       );
     }
@@ -1016,14 +1149,27 @@ class PipelineOwner {
         // relayout boundary back.
         _shouldMergeDirtyNodes = false;
       }
+
+      assert(() {
+        _debugDoingChildLayout = true;
+        return true;
+      }());
+      for (final PipelineOwner child in _children) {
+        child.flushLayout();
+      }
+      assert(
+        _nodesNeedingLayout.isEmpty,
+        'Child PipelineOwners must not dirty nodes in their parent.',
+      );
     } finally {
       _shouldMergeDirtyNodes = false;
       assert(() {
         _debugDoingLayout = false;
+        _debugDoingChildLayout = false;
         return true;
       }());
       if (!kReleaseMode) {
-        Timeline.finishSync();
+        FlutterTimeline.finishSync();
       }
     }
   }
@@ -1056,13 +1202,14 @@ class PipelineOwner {
   }
 
   final List<RenderObject> _nodesNeedingCompositingBitsUpdate = <RenderObject>[];
+
   /// Updates the [RenderObject.needsCompositing] bits.
   ///
   /// Called as part of the rendering pipeline after [flushLayout] and before
   /// [flushPaint].
   void flushCompositingBits() {
     if (!kReleaseMode) {
-      Timeline.startSync('UPDATING COMPOSITING BITS');
+      FlutterTimeline.startSync('UPDATING COMPOSITING BITS$_debugRootSuffixForTimelineEventNames');
     }
     _nodesNeedingCompositingBitsUpdate.sort((RenderObject a, RenderObject b) => a.depth - b.depth);
     for (final RenderObject node in _nodesNeedingCompositingBitsUpdate) {
@@ -1071,8 +1218,15 @@ class PipelineOwner {
       }
     }
     _nodesNeedingCompositingBitsUpdate.clear();
+    for (final PipelineOwner child in _children) {
+      child.flushCompositingBits();
+    }
+    assert(
+      _nodesNeedingCompositingBitsUpdate.isEmpty,
+      'Child PipelineOwners must not dirty nodes in their parent.',
+    );
     if (!kReleaseMode) {
-      Timeline.finishSync();
+      FlutterTimeline.finishSync();
     }
   }
 
@@ -1106,8 +1260,8 @@ class PipelineOwner {
         }
         return true;
       }());
-      Timeline.startSync(
-        'PAINT',
+      FlutterTimeline.startSync(
+        'PAINT$_debugRootSuffixForTimelineEventNames',
         arguments: debugTimelineArguments,
       );
     }
@@ -1120,7 +1274,8 @@ class PipelineOwner {
       _nodesNeedingPaint = <RenderObject>[];
 
       // Sort the dirty nodes in reverse order (deepest first).
-      for (final RenderObject node in dirtyNodes..sort((RenderObject a, RenderObject b) => b.depth - a.depth)) {
+      for (final RenderObject node
+          in dirtyNodes..sort((RenderObject a, RenderObject b) => b.depth - a.depth)) {
         assert(node._layerHandle.layer != null);
         if ((node._needsPaint || node._needsCompositedLayerUpdate) && node.owner == this) {
           if (node._layerHandle.layer!.attached) {
@@ -1135,68 +1290,89 @@ class PipelineOwner {
           }
         }
       }
-      assert(_nodesNeedingPaint.isEmpty);
+      for (final PipelineOwner child in _children) {
+        child.flushPaint();
+      }
+      assert(
+        _nodesNeedingPaint.isEmpty,
+        'Child PipelineOwners must not dirty nodes in their parent.',
+      );
     } finally {
       assert(() {
         _debugDoingPaint = false;
         return true;
       }());
       if (!kReleaseMode) {
-        Timeline.finishSync();
+        FlutterTimeline.finishSync();
       }
     }
   }
 
   /// The object that is managing semantics for this pipeline owner, if any.
   ///
-  /// An owner is created by [ensureSemantics]. The owner is valid for as long
-  /// there are [SemanticsHandle]s returned by [ensureSemantics] that have not
-  /// yet been disposed. Once the last handle has been disposed, the
-  /// [semanticsOwner] field will revert to null, and the previous owner will be
-  /// disposed.
+  /// An owner is created by [ensureSemantics] or when the [PipelineManifold] to
+  /// which this owner is connected has [PipelineManifold.semanticsEnabled] set
+  /// to true. The owner is valid for as long as
+  /// [PipelineManifold.semanticsEnabled] remains true or while there are
+  /// outstanding [SemanticsHandle]s from calls to [ensureSemantics]. The
+  /// [semanticsOwner] field will revert to null once both conditions are no
+  /// longer met.
   ///
   /// When [semanticsOwner] is null, the [PipelineOwner] skips all steps
   /// relating to semantics.
   SemanticsOwner? get semanticsOwner => _semanticsOwner;
   SemanticsOwner? _semanticsOwner;
 
-  /// The number of clients registered to listen for semantics.
+  /// Deprecated.
   ///
-  /// The number is increased whenever [ensureSemantics] is called and decreased
-  /// when [SemanticsHandle.dispose] is called.
+  /// Use [SemanticsBinding.debugOutstandingSemanticsHandles] instead. This
+  /// API is broken because an outstanding semantics handle on a given pipeline
+  /// owner doesn't mean that semantics are actually produced.
+  @Deprecated(
+    'Use SemanticsBinding.debugOutstandingSemanticsHandles instead. '
+    'This API is broken (see ensureSemantics). '
+    'This feature was deprecated after v3.22.0-23.0.pre.',
+  )
   int get debugOutstandingSemanticsHandles => _outstandingSemanticsHandles;
   int _outstandingSemanticsHandles = 0;
 
-  /// Opens a [SemanticsHandle] and calls [listener] whenever the semantics tree
-  /// updates.
+  /// Deprecated.
   ///
-  /// The [PipelineOwner] updates the semantics tree only when there are clients
-  /// that wish to use the semantics tree. These clients express their interest
-  /// by holding [SemanticsHandle] objects that notify them whenever the
-  /// semantics tree updates.
-  ///
-  /// Clients can close their [SemanticsHandle] by calling
-  /// [SemanticsHandle.dispose]. Once all the outstanding [SemanticsHandle]
-  /// objects for a given [PipelineOwner] are closed, the [PipelineOwner] stops
-  /// maintaining the semantics tree.
-  SemanticsHandle ensureSemantics({ VoidCallback? listener }) {
+  /// Call [SemanticsBinding.ensureSemantics] instead and optionally add a
+  /// listener to [PipelineOwner.semanticsOwner]. This API is broken as calling
+  /// it does not guarantee that semantics are produced.
+  @Deprecated(
+    'Call SemanticsBinding.ensureSemantics instead and optionally add a listener to PipelineOwner.semanticsOwner. '
+    'This API is broken; it does not guarantee that semantics are actually produced. '
+    'This feature was deprecated after v3.22.0-23.0.pre.',
+  )
+  SemanticsHandle ensureSemantics({VoidCallback? listener}) {
     _outstandingSemanticsHandles += 1;
-    if (_outstandingSemanticsHandles == 1) {
-      assert(_semanticsOwner == null);
-      _semanticsOwner = SemanticsOwner();
-      onSemanticsOwnerCreated?.call();
+    _updateSemanticsOwner();
+    return _LocalSemanticsHandle._(this, listener);
+  }
+
+  void _updateSemanticsOwner() {
+    if ((_manifold?.semanticsEnabled ?? false) || _outstandingSemanticsHandles > 0) {
+      if (_semanticsOwner == null) {
+        assert(
+          onSemanticsUpdate != null,
+          'Attempted to enable semantics without configuring an onSemanticsUpdate callback.',
+        );
+        _semanticsOwner = SemanticsOwner(onSemanticsUpdate: onSemanticsUpdate!);
+        onSemanticsOwnerCreated?.call();
+      }
+    } else if (_semanticsOwner != null) {
+      _semanticsOwner?.dispose();
+      _semanticsOwner = null;
+      onSemanticsOwnerDisposed?.call();
     }
-    return SemanticsHandle._(this, listener);
   }
 
   void _didDisposeSemanticsHandle() {
     assert(_semanticsOwner != null);
     _outstandingSemanticsHandles -= 1;
-    if (_outstandingSemanticsHandles == 0) {
-      _semanticsOwner!.dispose();
-      _semanticsOwner = null;
-      onSemanticsOwnerDisposed?.call();
-    }
+    _updateSemanticsOwner();
   }
 
   bool _debugDoingSemantics = false;
@@ -1213,12 +1389,14 @@ class PipelineOwner {
   /// [RenderObject.scheduleInitialSemantics] has been called.
   ///
   /// See [RendererBinding] for an example of how this function is used.
+  // See [_RenderObjectSemantics]'s documentation for detailed explanations on
+  // what this method does
   void flushSemantics() {
     if (_semanticsOwner == null) {
       return;
     }
     if (!kReleaseMode) {
-      Timeline.startSync('SEMANTICS');
+      FlutterTimeline.startSync('SEMANTICS$_debugRootSuffixForTimelineEventNames');
     }
     assert(_semanticsOwner != null);
     assert(() {
@@ -1226,26 +1404,294 @@ class PipelineOwner {
       return true;
     }());
     try {
-      final List<RenderObject> nodesToProcess = _nodesNeedingSemantics.toList()
-        ..sort((RenderObject a, RenderObject b) => a.depth - b.depth);
+      // This has to be top-to-down order since the geometries of a child and its
+      // subtree depends on ancestors' transforms and clips. If it updates child
+      // first, it may use dirty geometry in parent's semantics node to
+      // calculate the geometries in the subtree.
+      final List<RenderObject> nodesToProcess =
+          _nodesNeedingSemantics
+              .where((RenderObject object) => !object._needsLayout && object.owner == this)
+              .toList()
+            ..sort((RenderObject a, RenderObject b) => a.depth - b.depth);
       _nodesNeedingSemantics.clear();
-      for (final RenderObject node in nodesToProcess) {
-        if (node._needsSemanticsUpdate && node.owner == this) {
-          node._updateSemantics();
-        }
+      if (!kReleaseMode) {
+        FlutterTimeline.startSync('Semantics.updateChildren');
       }
+      for (final RenderObject node in nodesToProcess) {
+        if (node._semantics.parentDataDirty) {
+          // This node is either blocked by a sibling
+          // (via SemanticsConfiguration.isBlockingSemanticsOfPreviouslyPaintedNodes)
+          // or is hidden by parent through visitChildrenForSemantics. Otherwise,
+          // the parent node would have updated this node's parent data and it
+          // the not be dirty.
+          //
+          // Updating the parent data now may create a gap of render object with
+          // dirty parent data when this branch later rejoin the rendering tree.
+          continue;
+        }
+        node._semantics.updateChildren();
+      }
+      if (!kReleaseMode) {
+        FlutterTimeline.finishSync();
+      }
+
+      assert(() {
+        assert(nodesToProcess.isEmpty || rootNode != null);
+        if (rootNode != null) {
+          _RenderObjectSemantics.debugCheckForParentData(rootNode!);
+        }
+        return true;
+      }());
+
+      if (!kReleaseMode) {
+        FlutterTimeline.startSync('Semantics.ensureGeometry');
+      }
+      for (final RenderObject node in nodesToProcess) {
+        if (node._semantics.parentDataDirty) {
+          // same as above.
+          continue;
+        }
+        node._semantics.ensureGeometry();
+      }
+      if (!kReleaseMode) {
+        FlutterTimeline.finishSync();
+      }
+
+      if (!kReleaseMode) {
+        FlutterTimeline.startSync('Semantics.ensureSemanticsNode');
+      }
+      for (final RenderObject node in nodesToProcess.reversed) {
+        if (node._semantics.parentDataDirty) {
+          // same as above.
+          continue;
+        }
+        node._semantics.ensureSemanticsNode();
+      }
+      if (!kReleaseMode) {
+        FlutterTimeline.finishSync();
+      }
+
       _semanticsOwner!.sendSemanticsUpdate();
+      for (final PipelineOwner child in _children) {
+        child.flushSemantics();
+      }
+      assert(
+        _nodesNeedingSemantics.isEmpty,
+        'Child PipelineOwners must not dirty nodes in their parent.',
+      );
     } finally {
-      assert(_nodesNeedingSemantics.isEmpty);
       assert(() {
         _debugDoingSemantics = false;
         return true;
       }());
       if (!kReleaseMode) {
-        Timeline.finishSync();
+        FlutterTimeline.finishSync();
       }
     }
   }
+
+  @override
+  List<DiagnosticsNode> debugDescribeChildren() {
+    return <DiagnosticsNode>[
+      for (final PipelineOwner child in _children) child.toDiagnosticsNode(),
+    ];
+  }
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties.add(DiagnosticsProperty<RenderObject>('rootNode', rootNode, defaultValue: null));
+  }
+
+  // TREE MANAGEMENT
+
+  final Set<PipelineOwner> _children = <PipelineOwner>{};
+  PipelineManifold? _manifold;
+
+  PipelineOwner? _debugParent;
+  bool _debugSetParent(PipelineOwner child, PipelineOwner? parent) {
+    child._debugParent = parent;
+    return true;
+  }
+
+  String get _debugRootSuffixForTimelineEventNames => _debugParent == null ? ' (root)' : '';
+
+  /// Mark this [PipelineOwner] as attached to the given [PipelineManifold].
+  ///
+  /// Typically, this is only called directly on the root [PipelineOwner].
+  /// Children are automatically attached to their parent's [PipelineManifold]
+  /// when [adoptChild] is called.
+  void attach(PipelineManifold manifold) {
+    assert(_manifold == null);
+    _manifold = manifold;
+    _manifold!.addListener(_updateSemanticsOwner);
+    _updateSemanticsOwner();
+
+    for (final PipelineOwner child in _children) {
+      child.attach(manifold);
+    }
+  }
+
+  /// Mark this [PipelineOwner] as detached.
+  ///
+  /// Typically, this is only called directly on the root [PipelineOwner].
+  /// Children are automatically detached from their parent's [PipelineManifold]
+  /// when [dropChild] is called.
+  void detach() {
+    assert(_manifold != null);
+    _manifold!.removeListener(_updateSemanticsOwner);
+    _manifold = null;
+    // Not updating the semantics owner here to not disrupt any of its clients
+    // in case we get re-attached. If necessary, semantics owner will be updated
+    // in "attach", or disposed in "dispose", if not reattached.
+
+    for (final PipelineOwner child in _children) {
+      child.detach();
+    }
+  }
+
+  // In theory, child list modifications are also disallowed between
+  // _debugDoingChildrenLayout and _debugDoingPaint as well as between
+  // _debugDoingPaint and _debugDoingSemantics. However, since the associated
+  // flush methods are usually called back to back, this gets us close enough.
+  bool get _debugAllowChildListModifications =>
+      !_debugDoingChildLayout && !_debugDoingPaint && !_debugDoingSemantics;
+
+  /// Adds `child` to this [PipelineOwner].
+  ///
+  /// During the phases of frame production (see [RendererBinding.drawFrame]),
+  /// the parent [PipelineOwner] will complete a phase for the nodes it owns
+  /// directly before invoking the flush method corresponding to the current
+  /// phase on its child [PipelineOwner]s. For example, during layout, the
+  /// parent [PipelineOwner] will first lay out its own nodes before calling
+  /// [flushLayout] on its children. During paint, it will first paint its own
+  /// nodes before calling [flushPaint] on its children. This order also applies
+  /// for all the other phases.
+  ///
+  /// No assumptions must be made about the order in which child
+  /// [PipelineOwner]s are flushed.
+  ///
+  /// No new children may be added after the [PipelineOwner] has started calling
+  /// [flushLayout] on any of its children until the end of the current frame.
+  ///
+  /// To remove a child, call [dropChild].
+  void adoptChild(PipelineOwner child) {
+    assert(child._debugParent == null);
+    assert(!_children.contains(child));
+    assert(_debugAllowChildListModifications, 'Cannot modify child list after layout.');
+    _children.add(child);
+    if (!kReleaseMode) {
+      _debugSetParent(child, this);
+    }
+    if (_manifold != null) {
+      child.attach(_manifold!);
+    }
+  }
+
+  /// Removes a child [PipelineOwner] previously added via [adoptChild].
+  ///
+  /// This node will cease to call the flush methods on the `child` during frame
+  /// production.
+  ///
+  /// No children may be removed after the [PipelineOwner] has started calling
+  /// [flushLayout] on any of its children until the end of the current frame.
+  void dropChild(PipelineOwner child) {
+    assert(child._debugParent == this);
+    assert(_children.contains(child));
+    assert(_debugAllowChildListModifications, 'Cannot modify child list after layout.');
+    _children.remove(child);
+    if (!kReleaseMode) {
+      _debugSetParent(child, null);
+    }
+    if (_manifold != null) {
+      child.detach();
+    }
+  }
+
+  /// Calls `visitor` for each immediate child of this [PipelineOwner].
+  ///
+  /// See also:
+  ///
+  ///  * [adoptChild] to add a child.
+  ///  * [dropChild] to remove a child.
+  void visitChildren(PipelineOwnerVisitor visitor) {
+    _children.forEach(visitor);
+  }
+
+  /// Release any resources held by this pipeline owner.
+  ///
+  /// Prior to calling this method the pipeline owner must be removed from the
+  /// pipeline owner tree, i.e. it must have neither a parent nor any children
+  /// (see [dropChild]). It also must be [detach]ed from any [PipelineManifold].
+  ///
+  /// The object is no longer usable after calling dispose.
+  void dispose() {
+    assert(_children.isEmpty);
+    assert(rootNode == null);
+    assert(_manifold == null);
+    assert(_debugParent == null);
+    assert(debugMaybeDispatchDisposed(this));
+    _semanticsOwner?.dispose();
+    _semanticsOwner = null;
+    _nodesNeedingLayout.clear();
+    _nodesNeedingCompositingBitsUpdate.clear();
+    _nodesNeedingPaint.clear();
+    _nodesNeedingSemantics.clear();
+  }
+}
+
+/// Signature for the callback to [PipelineOwner.visitChildren].
+///
+/// The argument is the child being visited.
+typedef PipelineOwnerVisitor = void Function(PipelineOwner child);
+
+/// Manages a tree of [PipelineOwner]s.
+///
+/// All [PipelineOwner]s within a tree are attached to the same
+/// [PipelineManifold], which gives them access to shared functionality such
+/// as requesting a visual update (by calling [requestVisualUpdate]). As such,
+/// the [PipelineManifold] gives the [PipelineOwner]s access to functionality
+/// usually provided by the bindings without tying the [PipelineOwner]s to a
+/// particular binding implementation.
+///
+/// The root of the [PipelineOwner] tree is attached to a [PipelineManifold] by
+/// passing the manifold to [PipelineOwner.attach]. Children are attached to the
+/// same [PipelineManifold] as their parent when they are adopted via
+/// [PipelineOwner.adoptChild].
+///
+/// [PipelineOwner]s can register listeners with the [PipelineManifold] to be
+/// informed when certain values provided by the [PipelineManifold] change.
+abstract class PipelineManifold implements Listenable {
+  /// Whether [PipelineOwner]s connected to this [PipelineManifold] should
+  /// collect semantics information and produce a semantics tree.
+  ///
+  /// The [PipelineManifold] notifies its listeners (managed with [addListener]
+  /// and [removeListener]) when this property changes its value.
+  ///
+  /// See also:
+  ///
+  ///  * [SemanticsBinding.semanticsEnabled], which [PipelineManifold]
+  ///    implementations typically use to back this property.
+  bool get semanticsEnabled;
+
+  /// Called by a [PipelineOwner] connected to this [PipelineManifold] when a
+  /// [RenderObject] associated with that pipeline owner wishes to update its
+  /// visual appearance.
+  ///
+  /// Typical implementations of this function will schedule a task to flush the
+  /// various stages of the pipeline. This function might be called multiple
+  /// times in quick succession. Implementations should take care to discard
+  /// duplicate calls quickly.
+  ///
+  /// A [PipelineOwner] connected to this [PipelineManifold] will call
+  /// [PipelineOwner.onNeedVisualUpdate] instead of this method if it has been
+  /// configured with a non-null [PipelineOwner.onNeedVisualUpdate] callback.
+  ///
+  /// See also:
+  ///
+  ///  * [SchedulerBinding.ensureVisualUpdate], which [PipelineManifold]
+  ///    implementations typically call to implement this method.
+  void requestVisualUpdate();
 }
 
 /// An object in the render tree.
@@ -1373,9 +1819,10 @@ class PipelineOwner {
 /// [RenderObject.markNeedsLayout] so that if a parent has queried the intrinsic
 /// or baseline information, it gets marked dirty whenever the child's geometry
 /// changes.
-abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin implements HitTestTarget {
+abstract class RenderObject with DiagnosticableTreeMixin implements HitTestTarget {
   /// Initializes internal fields for subclasses.
   RenderObject() {
+    assert(debugMaybeDispatchCreated('rendering', 'RenderObject', this));
     _needsCompositing = isRepaintBoundary || alwaysNeedsCompositing;
     _wasRepaintBoundary = isRepaintBoundary;
   }
@@ -1436,6 +1883,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
   @mustCallSuper
   void dispose() {
     assert(!_debugDisposed);
+    assert(debugMaybeDispatchDisposed(this));
     _layerHandle.layer = null;
     assert(() {
       // TODO(dnfield): Enable this assert once clients have had a chance to
@@ -1481,34 +1929,105 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     }
   }
 
+  /// The depth of this render object in the render tree.
+  ///
+  /// The depth of nodes in a tree monotonically increases as you traverse down
+  /// the tree: a node always has a [depth] greater than its ancestors.
+  /// There's no guarantee regarding depth between siblings.
+  ///
+  /// The [depth] of a child can be more than one greater than the [depth] of
+  /// the parent, because the [depth] values are never decreased: all that
+  /// matters is that it's greater than the parent. Consider a tree with a root
+  /// node A, a child B, and a grandchild C. Initially, A will have [depth] 0,
+  /// B [depth] 1, and C [depth] 2. If C is moved to be a child of A,
+  /// sibling of B, then the numbers won't change. C's [depth] will still be 2.
+  ///
+  /// The depth of a node is used to ensure that nodes are processed in
+  /// depth order.  The [depth] is automatically maintained by the [adoptChild]
+  /// and [dropChild] methods.
+  int get depth => _depth;
+  int _depth = 0;
+
+  /// Adjust the [depth] of the given [child] to be greater than this node's own
+  /// [depth].
+  ///
+  /// Only call this method from overrides of [redepthChildren].
+  @protected
+  void redepthChild(RenderObject child) {
+    assert(child.owner == owner);
+    if (child._depth <= _depth) {
+      child._depth = _depth + 1;
+      child.redepthChildren();
+    }
+  }
+
+  /// Adjust the [depth] of this node's children, if any.
+  ///
+  /// Override this method in subclasses with child nodes to call [redepthChild]
+  /// for each child. Do not call this method directly.
+  @protected
+  void redepthChildren() {}
+
+  /// The parent of this render object in the render tree.
+  ///
+  /// The [parent] of the root node in the render tree is null.
+  RenderObject? get parent => _parent;
+  RenderObject? _parent;
+
+  /// The semantics parent of this render object in the semantics tree.
+  ///
+  /// This is typically the same as [parent].
+  ///
+  /// [OverlayPortal] overrides this field to change how it forms its
+  /// semantics sub-tree.
+  @visibleForOverriding
+  RenderObject? get semanticsParent => _parent;
+
   /// Called by subclasses when they decide a render object is a child.
   ///
   /// Only for use by subclasses when changing their child lists. Calling this
   /// in other cases will lead to an inconsistent tree and probably cause crashes.
-  @override
+  @mustCallSuper
+  @protected
   void adoptChild(RenderObject child) {
-    assert(_debugCanPerformMutations);
-    assert(child != null);
+    assert(child._parent == null);
+    assert(() {
+      RenderObject node = this;
+      while (node.parent != null) {
+        node = node.parent!;
+      }
+      assert(node != child); // indicates we are about to create a cycle
+      return true;
+    }());
+
     setupParentData(child);
     markNeedsLayout();
     markNeedsCompositingBitsUpdate();
     markNeedsSemanticsUpdate();
-    super.adoptChild(child);
+    child._parent = this;
+    if (attached) {
+      child.attach(_owner!);
+    }
+    redepthChild(child);
   }
 
   /// Called by subclasses when they decide a render object is no longer a child.
   ///
   /// Only for use by subclasses when changing their child lists. Calling this
   /// in other cases will lead to an inconsistent tree and probably cause crashes.
-  @override
+  @mustCallSuper
+  @protected
   void dropChild(RenderObject child) {
-    assert(_debugCanPerformMutations);
-    assert(child != null);
+    assert(child._parent == this);
+    assert(child.attached == attached);
     assert(child.parentData != null);
-    child._cleanRelayoutBoundary();
+    _cleanChildRelayoutBoundary(child);
     child.parentData!.detach();
     child.parentData = null;
-    super.dropChild(child);
+    child._parent = null;
+    if (attached) {
+      child.detach();
+    }
     markNeedsLayout();
     markNeedsCompositingBitsUpdate();
     markNeedsSemanticsUpdate();
@@ -1517,7 +2036,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
   /// Calls visitor for each immediate child of this render object.
   ///
   /// Override in subclasses with children and call the visitor for each child.
-  void visitChildren(RenderObjectVisitor visitor) { }
+  void visitChildren(RenderObjectVisitor visitor) {}
 
   /// The object responsible for creating this render object.
   ///
@@ -1528,25 +2047,29 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
   ///  * [DebugCreator], which the [widgets] library uses as values for this field.
   Object? debugCreator;
 
-  void _debugReportException(String method, Object exception, StackTrace stack) {
-    FlutterError.reportError(FlutterErrorDetails(
-      exception: exception,
-      stack: stack,
-      library: 'rendering library',
-      context: ErrorDescription('during $method()'),
-      informationCollector: () => <DiagnosticsNode>[
-        // debugCreator should always be null outside of debugMode, but we want
-        // the tree shaker to notice this.
-        if (kDebugMode && debugCreator != null)
-          DiagnosticsDebugCreator(debugCreator!),
-        describeForError('The following RenderObject was being processed when the exception was fired'),
-        // TODO(jacobr): this error message has a code smell. Consider whether
-        // displaying the truncated children is really useful for command line
-        // users. Inspector users can see the full tree by clicking on the
-        // render object so this may not be that useful.
-        describeForError('RenderObject', style: DiagnosticsTreeStyle.truncateChildren),
-      ],
-    ));
+  void _reportException(String method, Object exception, StackTrace stack) {
+    FlutterError.reportError(
+      FlutterErrorDetails(
+        exception: exception,
+        stack: stack,
+        library: 'rendering library',
+        context: ErrorDescription('during $method()'),
+        informationCollector:
+            () => <DiagnosticsNode>[
+              // debugCreator should always be null outside of debugMode, but we want
+              // the tree shaker to notice this.
+              if (kDebugMode && debugCreator != null) DiagnosticsDebugCreator(debugCreator!),
+              describeForError(
+                'The following RenderObject was being processed when the exception was fired',
+              ),
+              // TODO(jacobr): this error message has a code smell. Consider whether
+              // displaying the truncated children is really useful for command line
+              // users. Inspector users can see the full tree by clicking on the
+              // render object so this may not be that useful.
+              describeForError('RenderObject', style: DiagnosticsTreeStyle.truncateChildren),
+            ],
+      ),
+    );
   }
 
   /// Whether [performResize] for this render object is currently running.
@@ -1569,6 +2092,28 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
   /// null.
   static RenderObject? get debugActiveLayout => _debugActiveLayout;
   static RenderObject? _debugActiveLayout;
+
+  /// Set [debugActiveLayout] to null when [inner] callback is called.
+  /// This is useful when you have to temporarily clear that variable to
+  /// disable some false-positive checks, such as when computing toStringDeep
+  /// or using custom trees.
+  @pragma('dart2js:tryInline')
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  static T _withDebugActiveLayoutCleared<T>(T Function() inner) {
+    RenderObject? debugPreviousActiveLayout;
+    assert(() {
+      debugPreviousActiveLayout = _debugActiveLayout;
+      _debugActiveLayout = null;
+      return true;
+    }());
+    final T result = inner();
+    assert(() {
+      _debugActiveLayout = debugPreviousActiveLayout;
+      return true;
+    }());
+    return result;
+  }
 
   /// Whether the parent render object is permitted to use this render object's
   /// size.
@@ -1613,21 +2158,22 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
 
       RenderObject? activeLayoutRoot = this;
       while (activeLayoutRoot != null) {
-        final bool mutationsToDirtySubtreesAllowed = activeLayoutRoot.owner?._debugAllowMutationsToDirtySubtrees ?? false;
+        final bool mutationsToDirtySubtreesAllowed =
+            activeLayoutRoot.owner?._debugAllowMutationsToDirtySubtrees ?? false;
         final bool doingLayoutWithCallback = activeLayoutRoot._doingThisLayoutWithCallback;
         // Mutations on this subtree is allowed when:
-        // - the subtree is being mutated in a layout callback.
+        // - the "activeLayoutRoot" subtree is being mutated in a layout callback.
         // - a different part of the render tree is doing a layout callback,
         //   and this subtree is being reparented to that subtree, as a result
         //   of global key reparenting.
-        if (doingLayoutWithCallback || mutationsToDirtySubtreesAllowed && activeLayoutRoot._needsLayout) {
+        if (doingLayoutWithCallback ||
+            mutationsToDirtySubtreesAllowed && activeLayoutRoot._needsLayout) {
           result = true;
           return true;
         }
 
         if (!activeLayoutRoot._debugMutationsLocked) {
-          final AbstractNode? p = activeLayoutRoot.parent;
-          activeLayoutRoot = p is RenderObject ? p : null;
+          activeLayoutRoot = activeLayoutRoot.debugLayoutParent;
         } else {
           // activeLayoutRoot found.
           break;
@@ -1635,7 +2181,8 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
       }
 
       final RenderObject debugActiveLayout = RenderObject.debugActiveLayout!;
-      final String culpritMethodName = debugActiveLayout.debugDoingThisLayout ? 'performLayout' : 'performResize';
+      final String culpritMethodName =
+          debugActiveLayout.debugDoingThisLayout ? 'performLayout' : 'performResize';
       final String culpritFullMethodName = '${debugActiveLayout.runtimeType}.$culpritMethodName';
       result = false;
 
@@ -1667,16 +2214,21 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
             this,
             style: DiagnosticsTreeStyle.errorProperty,
           ),
-          ErrorHint('Consider using the LayoutBuilder widget to dynamically change a subtree during layout.'),
+          ErrorHint(
+            'Consider using the LayoutBuilder widget to dynamically change a subtree during layout.',
+          ),
         ]);
       }
 
-      final ErrorSummary summary = ErrorSummary('A $runtimeType was mutated in $culpritFullMethodName.');
+      final ErrorSummary summary = ErrorSummary(
+        'A $runtimeType was mutated in $culpritFullMethodName.',
+      );
       final bool isMutatedByAncestor = activeLayoutRoot == debugActiveLayout;
-      final String description = isMutatedByAncestor
-        ? 'A RenderObject must not mutate its descendants in its $culpritMethodName method.'
-        : 'A RenderObject must not mutate another RenderObject from a different render subtree '
-          'in its $culpritMethodName method.';
+      final String description =
+          isMutatedByAncestor
+              ? 'A RenderObject must not mutate its descendants in its $culpritMethodName method.'
+              : 'A RenderObject must not mutate another RenderObject from a different render subtree '
+                  'in its $culpritMethodName method.';
 
       throw FlutterError.fromParts(<DiagnosticsNode>[
         summary,
@@ -1691,27 +2243,70 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
           debugActiveLayout,
           style: DiagnosticsTreeStyle.errorProperty,
         ),
-        if (!isMutatedByAncestor) DiagnosticsProperty<RenderObject>(
-          'Their common ancestor was',
-          activeLayoutRoot,
-          style: DiagnosticsTreeStyle.errorProperty,
-        ),
+        if (!isMutatedByAncestor)
+          DiagnosticsProperty<RenderObject>(
+            'Their common ancestor was',
+            activeLayoutRoot,
+            style: DiagnosticsTreeStyle.errorProperty,
+          ),
         ErrorHint(
           'Mutating the layout of another RenderObject may cause some RenderObjects in its subtree to be laid out more than once. '
-          'Consider using the LayoutBuilder widget to dynamically mutate a subtree during layout.'
+          'Consider using the LayoutBuilder widget to dynamically mutate a subtree during layout.',
         ),
       ]);
     }());
     return result;
   }
 
-  @override
-  PipelineOwner? get owner => super.owner as PipelineOwner?;
+  /// The [RenderObject] that's expected to call [layout] on this [RenderObject]
+  /// in its [performLayout] implementation.
+  ///
+  /// This method is used to implement an assert that ensures the render subtree
+  /// actively performing layout can not get accidentally mutated. It's only
+  /// implemented in debug mode and always returns null in release mode.
+  ///
+  /// The default implementation returns [parent] and overriding is rarely
+  /// needed. A [RenderObject] subclass that expects its
+  /// [RenderObject.performLayout] to be called from a different [RenderObject]
+  /// that's not its [parent] should override this property to return the actual
+  /// layout parent.
+  @protected
+  RenderObject? get debugLayoutParent {
+    RenderObject? layoutParent;
+    assert(() {
+      layoutParent = parent;
+      return true;
+    }());
+    return layoutParent;
+  }
 
-  @override
+  /// The owner for this render object (null if unattached).
+  ///
+  /// The entire render tree that this render object belongs to
+  /// will have the same owner.
+  PipelineOwner? get owner => _owner;
+  PipelineOwner? _owner;
+
+  /// Whether the render tree this render object belongs to is attached to a [PipelineOwner].
+  ///
+  /// This becomes true during the call to [attach].
+  ///
+  /// This becomes false during the call to [detach].
+  bool get attached => _owner != null;
+
+  /// Mark this render object as attached to the given owner.
+  ///
+  /// Typically called only from the [parent]'s [attach] method, and by the
+  /// [owner] to mark the root of a tree as attached.
+  ///
+  /// Subclasses with children should override this method to
+  /// [attach] all their children to the same [owner]
+  /// after calling the inherited method, as in `super.attach(owner)`.
+  @mustCallSuper
   void attach(PipelineOwner owner) {
     assert(!_debugDisposed);
-    super.attach(owner);
+    assert(_owner == null);
+    _owner = owner;
     // If the node was dirtied in some way while unattached, make sure to add
     // it to the appropriate dirty list now that an owner is available
     if (_needsLayout && _relayoutBoundary != null) {
@@ -1730,12 +2325,25 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
       _needsPaint = false;
       markNeedsPaint();
     }
-    if (_needsSemanticsUpdate && _semanticsConfiguration.isSemanticBoundary) {
-      // Don't enter this block if we've never updated semantics at all;
-      // scheduleInitialSemantics() will handle it
-      _needsSemanticsUpdate = false;
+    if (_semantics.configProvider.effective.isSemanticBoundary &&
+        (_semantics.parentDataDirty || !_semantics.built)) {
       markNeedsSemanticsUpdate();
     }
+  }
+
+  /// Mark this render object as detached from its [PipelineOwner].
+  ///
+  /// Typically called only from the [parent]'s [detach], and by the [owner] to
+  /// mark the root of a tree as detached.
+  ///
+  /// Subclasses with children should override this method to
+  /// [detach] all their children after calling the inherited method,
+  /// as in `super.detach()`.
+  @mustCallSuper
+  void detach() {
+    assert(_owner != null);
+    _owner = null;
+    assert(parent == null || attached == parent!.attached);
   }
 
   /// Whether this render object's layout information is dirty.
@@ -1754,8 +2362,35 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     }());
     return result;
   }
+
   bool _needsLayout = true;
 
+  /// The nearest relayout boundary enclosing this render object, if known.
+  ///
+  /// When a render object is marked as needing layout, its parent may
+  /// as a result also need to be marked as needing layout.
+  /// For details, see [markNeedsLayout].
+  /// A render object where relayout does not require relayout of the parent
+  /// (because its size cannot change on relayout, or because
+  /// its parent does not use the child's size for its own layout)
+  /// is a "relayout boundary".
+  ///
+  /// This property is set in [layout], and consulted by [markNeedsLayout] in
+  /// deciding whether to recursively mark the parent as also needing layout.
+  ///
+  /// This property is initially null, and becomes null again if this
+  /// render object is removed from the tree (with [dropChild]);
+  /// it remains null until the first layout of this render object
+  /// after it was most recently added to the tree.
+  /// This property can also be null while an ancestor in the tree is
+  /// currently doing layout, until this render object itself does layout.
+  ///
+  /// When not null, the relayout boundary is either this render object itself
+  /// or one of its ancestors, and all the render objects in the ancestry chain
+  /// up through that ancestor have the same [_relayoutBoundary].
+  /// Equivalently: when not null, the relayout boundary is either this render
+  /// object itself or the same as that of its parent.  (So [_relayoutBoundary]
+  /// is one of `null`, `this`, or `parent!._relayoutBoundary!`.)
   RenderObject? _relayoutBoundary;
 
   /// Whether [invokeLayoutCallback] for this render object is currently running.
@@ -1773,27 +2408,28 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     }
     return _constraints!;
   }
+
   Constraints? _constraints;
 
-  /// Verify that the object's constraints are being met. Override
-  /// this function in a subclass to verify that your state matches
-  /// the constraints object. This function is only called in checked
-  /// mode and only when needsLayout is false. If the constraints are
-  /// not met, it should assert or throw an exception.
+  /// Verify that the object's constraints are being met. Override this function
+  /// in a subclass to verify that your state matches the constraints object.
+  /// This function is only called when asserts are enabled (i.e. in debug mode)
+  /// and only when needsLayout is false. If the constraints are not met, it
+  /// should assert or throw an exception.
   @protected
   void debugAssertDoesMeetConstraints();
 
-  /// When true, debugAssertDoesMeetConstraints() is currently
-  /// executing asserts for verifying the consistent behavior of
+  /// When true, a debug method ([debugAssertDoesMeetConstraints], for instance)
+  /// is currently executing asserts for verifying the consistent behavior of
   /// intrinsic dimensions methods.
   ///
-  /// This should only be set by debugAssertDoesMeetConstraints()
-  /// implementations. It is used by tests to selectively ignore
-  /// custom layout callbacks. It should not be set outside of
-  /// debugAssertDoesMeetConstraints(), and should not be checked in
-  /// release mode (where it will always be false).
+  /// This is typically set by framework debug methods. It is read by tests to
+  /// selectively ignore custom layout callbacks. It should not be set outside of
+  /// intrinsic-checking debug methods, and should not be checked in release mode
+  /// (where it will always be false).
   static bool debugCheckingIntrinsics = false;
-  bool _debugSubtreeRelayoutRootAlreadyMarkedNeedsLayout() {
+
+  bool _debugRelayoutBoundaryAlreadyMarkedNeedsLayout() {
     if (_relayoutBoundary == null) {
       // We don't know where our relayout boundary is yet.
       return true;
@@ -1802,7 +2438,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     while (node != _relayoutBoundary) {
       assert(node._relayoutBoundary == _relayoutBoundary);
       assert(node.parent != null);
-      node = node.parent! as RenderObject;
+      node = node.parent!;
       if ((!node._needsLayout) && (!node._debugDoingThisLayout)) {
         return false;
       }
@@ -1852,7 +2488,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
   void markNeedsLayout() {
     assert(_debugCanPerformMutations);
     if (_needsLayout) {
-      assert(_debugSubtreeRelayoutRootAlreadyMarkedNeedsLayout());
+      assert(_debugRelayoutBoundaryAlreadyMarkedNeedsLayout());
       return;
     }
     if (_relayoutBoundary == null) {
@@ -1896,7 +2532,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     assert(_debugCanPerformMutations);
     _needsLayout = true;
     assert(this.parent != null);
-    final RenderObject parent = this.parent! as RenderObject;
+    final RenderObject parent = this.parent!;
     if (!_doingThisLayoutWithCallback) {
       parent.markNeedsLayout();
     } else {
@@ -1917,32 +2553,36 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     markParentNeedsLayout();
   }
 
-  void _cleanRelayoutBoundary() {
-    if (_relayoutBoundary != this) {
-      _relayoutBoundary = null;
-      visitChildren(_cleanChildRelayoutBoundary);
+  /// Set [_relayoutBoundary] to null throughout this render object's subtree,
+  /// stopping at relayout boundaries.
+  // This is a static method to reduce closure allocation with visitChildren.
+  static void _cleanChildRelayoutBoundary(RenderObject child) {
+    if (child._relayoutBoundary != child) {
+      child.visitChildren(_cleanChildRelayoutBoundary);
+      child._relayoutBoundary = null;
     }
   }
 
-  void _propagateRelayoutBoundary() {
-    if (_relayoutBoundary == this) {
+  // This is a static method to reduce closure allocation with visitChildren.
+  static void _propagateRelayoutBoundaryToChild(RenderObject child) {
+    if (child._relayoutBoundary == child) {
       return;
     }
-    final RenderObject? parentRelayoutBoundary = (parent as RenderObject?)?._relayoutBoundary;
+    final RenderObject? parentRelayoutBoundary = child.parent?._relayoutBoundary;
     assert(parentRelayoutBoundary != null);
-    if (parentRelayoutBoundary != _relayoutBoundary) {
-      _relayoutBoundary = parentRelayoutBoundary;
-      visitChildren(_propagateRelayoutBoundaryToChild);
-    }
+    assert(parentRelayoutBoundary != child._relayoutBoundary);
+    child._setRelayoutBoundary(parentRelayoutBoundary!);
   }
 
-  // Reduces closure allocation for visitChildren use cases.
-  static void _cleanChildRelayoutBoundary(RenderObject child) {
-    child._cleanRelayoutBoundary();
-  }
-
-  static void _propagateRelayoutBoundaryToChild(RenderObject child) {
-    child._propagateRelayoutBoundary();
+  /// Set [_relayoutBoundary] to [value] throughout this render object's
+  /// subtree, including this render object but stopping at relayout boundaries
+  /// thereafter.
+  void _setRelayoutBoundary(RenderObject value) {
+    assert(value != _relayoutBoundary);
+    // This may temporarily break the _relayoutBoundary invariant at children;
+    // the visitChildren restores the invariant.
+    _relayoutBoundary = value;
+    visitChildren(_propagateRelayoutBoundaryToChild);
   }
 
   /// Bootstrap the rendering pipeline by scheduling the very first layout.
@@ -1967,6 +2607,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
 
   @pragma('vm:notify-debugger-on-exception')
   void _layoutWithoutResize() {
+    assert(_needsLayout);
     assert(_relayoutBoundary == this);
     RenderObject? debugPreviousActiveLayout;
     assert(!_debugMutationsLocked);
@@ -1986,7 +2627,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
       performLayout();
       markNeedsSemanticsUpdate();
     } catch (e, stack) {
-      _debugReportException('performLayout', e, stack);
+      _reportException('performLayout', e, stack);
     }
     assert(() {
       _debugActiveLayout = debugPreviousActiveLayout;
@@ -2022,7 +2663,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
   /// implemented here) to return early if the child does not need to do any
   /// work to update its layout information.
   @pragma('vm:notify-debugger-on-exception')
-  void layout(Constraints constraints, { bool parentUsesSize = false }) {
+  void layout(Constraints constraints, {bool parentUsesSize = false}) {
     assert(!_debugDisposed);
     if (!kReleaseMode && debugProfileLayoutsEnabled) {
       Map<String, String>? debugTimelineArguments;
@@ -2032,45 +2673,47 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
         }
         return true;
       }());
-      Timeline.startSync(
-        '$runtimeType',
-        arguments: debugTimelineArguments,
-      );
+      FlutterTimeline.startSync('$runtimeType', arguments: debugTimelineArguments);
     }
-    assert(constraints != null);
-    assert(constraints.debugAssertIsValid(
-      isAppliedConstraint: true,
-      informationCollector: () {
-        final List<String> stack = StackTrace.current.toString().split('\n');
-        int? targetFrame;
-        final Pattern layoutFramePattern = RegExp(r'^#[0-9]+ +RenderObject.layout \(');
-        for (int i = 0; i < stack.length; i += 1) {
-          if (layoutFramePattern.matchAsPrefix(stack[i]) != null) {
-            targetFrame = i + 1;
-            break;
+    assert(
+      constraints.debugAssertIsValid(
+        isAppliedConstraint: true,
+        informationCollector: () {
+          final List<String> stack = StackTrace.current.toString().split('\n');
+          int? targetFrame;
+          final Pattern layoutFramePattern = RegExp(r'^#[0-9]+ +Render(?:Object|Box).layout \(');
+          for (int i = 0; i < stack.length; i += 1) {
+            if (layoutFramePattern.matchAsPrefix(stack[i]) != null) {
+              targetFrame = i + 1;
+            } else if (targetFrame != null) {
+              break;
+            }
           }
-        }
-        if (targetFrame != null && targetFrame < stack.length) {
-          final Pattern targetFramePattern = RegExp(r'^#[0-9]+ +(.+)$');
-          final Match? targetFrameMatch = targetFramePattern.matchAsPrefix(stack[targetFrame]);
-          final String? problemFunction = (targetFrameMatch != null && targetFrameMatch.groupCount > 0) ? targetFrameMatch.group(1) : stack[targetFrame].trim();
-          // TODO(jacobr): this case is similar to displaying a single stack frame.
-          return <DiagnosticsNode>[
-            ErrorDescription(
-              "These invalid constraints were provided to $runtimeType's layout() "
-              'function by the following function, which probably computed the '
-              'invalid constraints in question:\n'
-              '  $problemFunction',
-            ),
-          ];
-        }
-        return <DiagnosticsNode>[];
-      },
-    ));
+          if (targetFrame != null && targetFrame < stack.length) {
+            final Pattern targetFramePattern = RegExp(r'^#[0-9]+ +(.+)$');
+            final Match? targetFrameMatch = targetFramePattern.matchAsPrefix(stack[targetFrame]);
+            final String? problemFunction =
+                (targetFrameMatch != null && targetFrameMatch.groupCount > 0)
+                    ? targetFrameMatch.group(1)
+                    : stack[targetFrame].trim();
+            return <DiagnosticsNode>[
+              ErrorDescription(
+                "These invalid constraints were provided to $runtimeType's layout() "
+                'function by the following function, which probably computed the '
+                'invalid constraints in question:\n'
+                '  $problemFunction',
+              ),
+            ];
+          }
+          return <DiagnosticsNode>[];
+        },
+      ),
+    );
     assert(!_debugDoingThisResize);
     assert(!_debugDoingThisLayout);
-    final bool isRelayoutBoundary = !parentUsesSize || sizedByParent || constraints.isTight || parent is! RenderObject;
-    final RenderObject relayoutBoundary = isRelayoutBoundary ? this : (parent! as RenderObject)._relayoutBoundary!;
+    final bool isRelayoutBoundary =
+        !parentUsesSize || sizedByParent || constraints.isTight || parent is! RenderObject;
+    final RenderObject relayoutBoundary = isRelayoutBoundary ? this : parent!._relayoutBoundary!;
     assert(() {
       _debugCanParentUseSize = parentUsesSize;
       return true;
@@ -2092,16 +2735,16 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
       }());
 
       if (relayoutBoundary != _relayoutBoundary) {
-        _relayoutBoundary = relayoutBoundary;
-        visitChildren(_propagateRelayoutBoundaryToChild);
+        _setRelayoutBoundary(relayoutBoundary);
       }
 
       if (!kReleaseMode && debugProfileLayoutsEnabled) {
-        Timeline.finishSync();
+        FlutterTimeline.finishSync();
       }
       return;
     }
     _constraints = constraints;
+
     if (_relayoutBoundary != null && relayoutBoundary != _relayoutBoundary) {
       // The local relayout boundary has changed, must notify children in case
       // they also need updating. Otherwise, they will be confused about what
@@ -2109,12 +2752,15 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
       visitChildren(_cleanChildRelayoutBoundary);
     }
     _relayoutBoundary = relayoutBoundary;
+
     assert(!_debugMutationsLocked);
     assert(!_doingThisLayoutWithCallback);
     assert(() {
       _debugMutationsLocked = true;
       if (debugPrintLayouts) {
-        debugPrint('Laying out (${sizedByParent ? "with separate resize" : "with resize allowed"}) $this');
+        debugPrint(
+          'Laying out (${sizedByParent ? "with separate resize" : "with resize allowed"}) $this',
+        );
       }
       return true;
     }());
@@ -2130,7 +2776,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
           return true;
         }());
       } catch (e, stack) {
-        _debugReportException('performResize', e, stack);
+        _reportException('performResize', e, stack);
       }
       assert(() {
         _debugDoingThisResize = false;
@@ -2152,7 +2798,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
         return true;
       }());
     } catch (e, stack) {
-      _debugReportException('performLayout', e, stack);
+      _reportException('performLayout', e, stack);
     }
     assert(() {
       _debugActiveLayout = debugPreviousActiveLayout;
@@ -2164,7 +2810,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     markNeedsPaint();
 
     if (!kReleaseMode && debugProfileLayoutsEnabled) {
-      Timeline.finishSync();
+      FlutterTimeline.finishSync();
     }
   }
 
@@ -2175,7 +2821,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
   /// subclass should override [debugResetSize] to reapply the current values of
   /// [debugCanParentUseSize] to that state.
   @protected
-  void debugResetSize() { }
+  void debugResetSize() {}
 
   /// Whether the constraints are the only input to the sizing algorithm (in
   /// particular, child nodes have no impact).
@@ -2256,7 +2902,9 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     assert(!_doingThisLayoutWithCallback);
     _doingThisLayoutWithCallback = true;
     try {
-      owner!._enableMutationsToDirtySubtrees(() { callback(constraints as T); });
+      owner!._enableMutationsToDirtySubtrees(() {
+        callback(constraints as T);
+      });
     } finally {
       _doingThisLayoutWithCallback = false;
     }
@@ -2302,7 +2950,10 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
   ///
   /// This can be used to record metrics about whether the node should actually
   /// be a repaint boundary.
-  void debugRegisterRepaintBoundaryPaint({ bool includedParent = true, bool includedChild = false }) { }
+  void debugRegisterRepaintBoundaryPaint({
+    bool includedParent = true,
+    bool includedChild = false,
+  }) {}
 
   /// Whether this render object always needs compositing.
   ///
@@ -2337,7 +2988,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
   /// needing to paint and needing a composited layer update, this method is only
   /// called once.
   // TODO(jonahwilliams): https://github.com/flutter/flutter/issues/102102 revisit the
-  // contraint that the instance/type of layer cannot be changed at runtime.
+  // constraint that the instance/type of layer cannot be changed at runtime.
   OffsetLayer updateCompositedLayer({required covariant OffsetLayer? oldLayer}) {
     assert(isRepaintBoundary);
     return oldLayer ?? OffsetLayer();
@@ -2427,7 +3078,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     }
     _needsCompositingBitsUpdate = true;
     if (parent is RenderObject) {
-      final RenderObject parent = this.parent! as RenderObject;
+      final RenderObject parent = this.parent!;
       if (parent._needsCompositingBitsUpdate) {
         return;
       }
@@ -2479,7 +3130,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     if (!isRepaintBoundary && _wasRepaintBoundary) {
       _needsPaint = false;
       _needsCompositedLayerUpdate = false;
-      owner?._nodesNeedingPaint.remove(this);
+      owner?._nodesNeedingPaint.removeWhere((RenderObject t) => identical(t, this));
       _needsCompositingBitsUpdate = false;
       markNeedsPaint();
     } else if (oldNeedsCompositing != _needsCompositing) {
@@ -2512,6 +3163,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     }());
     return result;
   }
+
   bool _needsPaint = true;
 
   /// Whether this render object's layer information is dirty.
@@ -2530,6 +3182,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     }());
     return result;
   }
+
   bool _needsCompositedLayerUpdate = false;
 
   /// Mark this render object as having changed its visual appearance.
@@ -2575,10 +3228,8 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
         owner!._nodesNeedingPaint.add(this);
         owner!.requestVisualUpdate();
       }
-    } else if (parent is RenderObject) {
-      final RenderObject parent = this.parent! as RenderObject;
-      parent.markNeedsPaint();
-      assert(parent == this.parent);
+    } else if (parent != null) {
+      parent!.markNeedsPaint();
     } else {
       assert(() {
         if (debugPrintMarkNeedsPaintStacks) {
@@ -2586,13 +3237,14 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
         }
         return true;
       }());
-      // If we're the root of the render tree (probably a RenderView),
-      // then we have to paint ourselves, since nobody else can paint
-      // us. We don't add ourselves to _nodesNeedingPaint in this
-      // case, because the root is always told to paint regardless.
-      if (owner != null) {
-        owner!.requestVisualUpdate();
-      }
+      // If we are the root of the render tree and not a repaint boundary
+      // then we have to paint ourselves, since nobody else can paint us.
+      // We don't add ourselves to _nodesNeedingPaint in this case,
+      // because the root is always told to paint regardless.
+      //
+      // Trees rooted at a RenderView do not go through this
+      // code path because RenderViews are repaint boundaries.
+      owner?.requestVisualUpdate();
     }
   }
 
@@ -2646,7 +3298,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     assert(_needsPaint || _needsCompositedLayerUpdate);
     assert(_layerHandle.layer != null);
     assert(!_layerHandle.layer!.attached);
-    AbstractNode? node = parent;
+    RenderObject? node = parent;
     while (node is RenderObject) {
       if (node.isRepaintBoundary) {
         if (node._layerHandle.layer == null) {
@@ -2735,15 +3387,12 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
         }
         return true;
       }());
-      Timeline.startSync(
-        '$runtimeType',
-        arguments: debugTimelineArguments,
-      );
+      FlutterTimeline.startSync('$runtimeType', arguments: debugTimelineArguments);
     }
     assert(() {
       if (_needsCompositingBitsUpdate) {
         if (parent is RenderObject) {
-          final RenderObject parent = this.parent! as RenderObject;
+          final RenderObject parent = this.parent!;
           bool visitedByParent = false;
           parent.visitChildren((RenderObject child) {
             if (child == this) {
@@ -2756,20 +3405,14 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
                 "A RenderObject was not visited by the parent's visitChildren "
                 'during paint.',
               ),
-              parent.describeForError(
-                'The parent was',
-              ),
-              describeForError(
-                'The child that was not visited was',
-              ),
+              parent.describeForError('The parent was'),
+              describeForError('The child that was not visited was'),
               ErrorDescription(
                 'A RenderObject with children must implement visitChildren and '
                 'call the visitor exactly once for each child; it also should not '
                 'paint children that were removed with dropChild.',
               ),
-              ErrorHint(
-                'This usually indicates an error in the Flutter framework itself.',
-              ),
+              ErrorHint('This usually indicates an error in the Flutter framework itself.'),
             ]);
           }
         }
@@ -2787,9 +3430,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
             'painted because this indicates that the tree has not yet been '
             'properly configured for creating the layer tree.',
           ),
-          ErrorHint(
-            'This usually indicates an error in the Flutter framework itself.',
-          ),
+          ErrorHint('This usually indicates an error in the Flutter framework itself.'),
         ]);
       }
       return true;
@@ -2810,7 +3451,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
       assert(!_needsLayout); // check that the paint() method didn't mark us dirty again
       assert(!_needsPaint); // check that the paint() method didn't mark us dirty again
     } catch (e, stack) {
-      _debugReportException('paint', e, stack);
+      _reportException('paint', e, stack);
     }
     assert(() {
       debugPaint(context, offset);
@@ -2819,7 +3460,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
       return true;
     }());
     if (!kReleaseMode && debugProfilePaintsEnabled) {
-      Timeline.finishSync();
+      FlutterTimeline.finishSync();
     }
   }
 
@@ -2831,7 +3472,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
   Rect get paintBounds;
 
   /// Override this method to paint debugging information.
-  void debugPaint(PaintingContext context, Offset offset) { }
+  void debugPaint(PaintingContext context, Offset offset) {}
 
   /// Paint this render object into the given context at the given offset.
   ///
@@ -2850,7 +3491,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
   /// given context), the current canvas held by the context might change
   /// because draw operations before and after painting children might need to
   /// be recorded on separate compositing layers.
-  void paint(PaintingContext context, Offset offset) { }
+  void paint(PaintingContext context, Offset offset) {}
 
   /// Applies the transform that would be applied when painting the given child
   /// to the given matrix.
@@ -2887,12 +3528,21 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
   }
 
   /// {@template flutter.rendering.RenderObject.getTransformTo}
-  /// Applies the paint transform up the tree to `ancestor`.
+  /// Applies the paint transform from this [RenderObject] to the `target`
+  /// [RenderObject].
   ///
   /// Returns a matrix that maps the local paint coordinate system to the
-  /// coordinate system of `ancestor`.
+  /// coordinate system of `target`, or a [Matrix4.zero] if the paint transform
+  /// can not be computed.
   ///
-  /// If `ancestor` is null, this method returns a matrix that maps from the
+  /// This method throws an exception when the `target` is not in the same render
+  /// tree as this [RenderObject], as the behavior is undefined.
+  ///
+  /// This method ignores [RenderObject.paintsChild]. This means it will still
+  /// try to compute the paint transform even if this [RenderObject] or
+  /// `target` is currently not visible.
+  ///
+  /// If `target` is null, this method returns a matrix that maps from the
   /// local paint coordinate system to the coordinate system of the
   /// [PipelineOwner.rootNode].
   /// {@endtemplate}
@@ -2902,30 +3552,68 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
   /// the global coordinate system in logical pixels. To get physical pixels,
   /// use [applyPaintTransform] from the [RenderView] to further transform the
   /// coordinate.
-  Matrix4 getTransformTo(RenderObject? ancestor) {
-    final bool ancestorSpecified = ancestor != null;
+  Matrix4 getTransformTo(RenderObject? target) {
     assert(attached);
-    if (ancestor == null) {
-      final AbstractNode? rootNode = owner!.rootNode;
-      if (rootNode is RenderObject) {
-        ancestor = rootNode;
+    // The paths from to fromRenderObject and toRenderObject's common ancestor.
+    // Each list's length is greater than 1 if not null.
+    //
+    // [this, ...., commonAncestorRenderObject], or null if `this` is the common
+    // ancestor.
+    List<RenderObject>? fromPath;
+    // [target, ...., commonAncestorRenderObject], or null if `target` is the
+    // common ancestor.
+    List<RenderObject>? toPath;
+
+    RenderObject from = this;
+    RenderObject to = target ?? owner!.rootNode!;
+
+    while (!identical(from, to)) {
+      final int fromDepth = from.depth;
+      final int toDepth = to.depth;
+
+      if (fromDepth >= toDepth) {
+        final RenderObject fromParent =
+            from.parent ??
+            (throw FlutterError('$target and $this are not in the same render tree.'));
+        (fromPath ??= <RenderObject>[this]).add(fromParent);
+        from = fromParent;
+      }
+      if (fromDepth <= toDepth) {
+        final RenderObject toParent =
+            to.parent ?? (throw FlutterError('$target and $this are not in the same render tree.'));
+        assert(
+          target != null,
+          '$this has a depth that is less than or equal to ${owner?.rootNode}',
+        );
+        (toPath ??= <RenderObject>[target!]).add(toParent);
+        to = toParent;
       }
     }
-    final List<RenderObject> renderers = <RenderObject>[];
-    for (RenderObject renderer = this; renderer != ancestor; renderer = renderer.parent! as RenderObject) {
-      renderers.add(renderer);
-      assert(renderer.parent != null); // Failed to find ancestor in parent chain.
-    }
-    if (ancestorSpecified) {
-      renderers.add(ancestor!);
-    }
-    final Matrix4 transform = Matrix4.identity();
-    for (int index = renderers.length - 1; index > 0; index -= 1) {
-      renderers[index].applyPaintTransform(renderers[index - 1], transform);
-    }
-    return transform;
-  }
 
+    Matrix4? fromTransform;
+    if (fromPath != null) {
+      assert(fromPath.length > 1);
+      fromTransform = Matrix4.identity();
+      final int lastIndex = target == null ? fromPath.length - 2 : fromPath.length - 1;
+      for (int index = lastIndex; index > 0; index -= 1) {
+        fromPath[index].applyPaintTransform(fromPath[index - 1], fromTransform);
+      }
+    }
+    if (toPath == null) {
+      return fromTransform ?? Matrix4.identity();
+    }
+
+    assert(toPath.length > 1);
+    final Matrix4 toTransform = Matrix4.identity();
+    for (int index = toPath.length - 1; index > 0; index -= 1) {
+      toPath[index].applyPaintTransform(toPath[index - 1], toTransform);
+    }
+    if (toTransform.invert() == 0) {
+      // If the matrix is singular then `invert()` doesn't do anything.
+      return Matrix4.zero();
+    }
+    return (fromTransform?..multiply(toTransform)) ?? toTransform;
+  }
 
   /// Returns a rect in this object's coordinate system that describes
   /// the approximate bounding box of the clip rect that would be
@@ -2983,8 +3671,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     assert(attached);
     assert(parent is! RenderObject);
     assert(!owner!._debugDoingSemantics);
-    assert(_semantics == null);
-    assert(_needsSemanticsUpdate);
+    assert(_semantics.parentDataDirty || !_semantics.built);
     assert(owner!._semanticsOwner != null);
     owner!._nodesNeedingSemantics.add(this);
     owner!.requestVisualUpdate();
@@ -3041,31 +3728,27 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     if (owner!.semanticsOwner == null) {
       return;
     }
-    if (_semantics != null && !_semantics!.isMergedIntoParent) {
-      _semantics!.sendEvent(semanticsEvent);
+    final SemanticsNode? node = _semantics.cachedSemanticsNode;
+    if (node != null && !node.isMergedIntoParent) {
+      node.sendEvent(semanticsEvent);
     } else if (parent != null) {
-      final RenderObject renderParent = parent! as RenderObject;
-      renderParent.sendSemanticsEvent(semanticsEvent);
+      parent!.sendSemanticsEvent(semanticsEvent);
     }
-  }
-
-  // Use [_semanticsConfiguration] to access.
-  SemanticsConfiguration? _cachedSemanticsConfiguration;
-
-  SemanticsConfiguration get _semanticsConfiguration {
-    if (_cachedSemanticsConfiguration == null) {
-      _cachedSemanticsConfiguration = SemanticsConfiguration();
-      describeSemanticsConfiguration(_cachedSemanticsConfiguration!);
-    }
-    return _cachedSemanticsConfiguration!;
   }
 
   /// The bounding box, in the local coordinate system, of this
   /// object, for accessibility purposes.
   Rect get semanticBounds;
 
-  bool _needsSemanticsUpdate = true;
-  SemanticsNode? _semantics;
+  /// Whether the semantics of this render object is dirty and await the update.
+  ///
+  /// Always returns false in release mode.
+  bool get debugNeedsSemanticsUpdate {
+    if (kReleaseMode) {
+      return false;
+    }
+    return _semantics.parentDataDirty;
+  }
 
   /// The semantics of this render object.
   ///
@@ -3076,8 +3759,10 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
   /// Only valid in debug and profile mode. In release builds, always returns
   /// null.
   SemanticsNode? get debugSemantics {
-    if (!kReleaseMode) {
-      return _semantics;
+    // If _semantics.built is not true, the semantics node is an old cache and
+    // is not on the semantics tree.
+    if (!kReleaseMode && _semantics.built) {
+      return _semantics.cachedSemanticsNode;
     }
     return null;
   }
@@ -3090,8 +3775,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
   /// overridden [assembleSemanticsNode] method, to dispose of those nodes.
   @mustCallSuper
   void clearSemantics() {
-    _needsSemanticsUpdate = true;
-    _semantics = null;
+    _semantics.clear();
     visitChildren((RenderObject child) {
       child.clearSemantics();
     });
@@ -3106,168 +3790,12 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     assert(!_debugDisposed);
     assert(!attached || !owner!._debugDoingSemantics);
     if (!attached || owner!._semanticsOwner == null) {
-      _cachedSemanticsConfiguration = null;
       return;
     }
-
-    // Dirty the semantics tree starting at `this` until we have reached a
-    // RenderObject that is a semantics boundary. All semantics past this
-    // RenderObject are still up-to date. Therefore, we will later only rebuild
-    // the semantics subtree starting at the identified semantics boundary.
-
-    final bool wasSemanticsBoundary = _semantics != null && (_cachedSemanticsConfiguration?.isSemanticBoundary ?? false);
-    _cachedSemanticsConfiguration = null;
-    bool isEffectiveSemanticsBoundary = _semanticsConfiguration.isSemanticBoundary && wasSemanticsBoundary;
-    RenderObject node = this;
-
-    while (!isEffectiveSemanticsBoundary && node.parent is RenderObject) {
-      if (node != this && node._needsSemanticsUpdate) {
-        break;
-      }
-      node._needsSemanticsUpdate = true;
-
-      node = node.parent! as RenderObject;
-      isEffectiveSemanticsBoundary = node._semanticsConfiguration.isSemanticBoundary;
-      if (isEffectiveSemanticsBoundary && node._semantics == null) {
-        // We have reached a semantics boundary that doesn't own a semantics node.
-        // That means the semantics of this branch are currently blocked and will
-        // not appear in the semantics tree. We can abort the walk here.
-        return;
-      }
-    }
-    if (node != this && _semantics != null && _needsSemanticsUpdate) {
-      // If `this` node has already been added to [owner._nodesNeedingSemantics]
-      // remove it as it is no longer guaranteed that its semantics
-      // node will continue to be in the tree. If it still is in the tree, the
-      // ancestor `node` added to [owner._nodesNeedingSemantics] at the end of
-      // this block will ensure that the semantics of `this` node actually gets
-      // updated.
-      // (See semantics_10_test.dart for an example why this is required).
-      owner!._nodesNeedingSemantics.remove(this);
-    }
-    if (!node._needsSemanticsUpdate) {
-      node._needsSemanticsUpdate = true;
-      if (owner != null) {
-        assert(node._semanticsConfiguration.isSemanticBoundary || node.parent is! RenderObject);
-        owner!._nodesNeedingSemantics.add(node);
-        owner!.requestVisualUpdate();
-      }
-    }
+    _semantics.markNeedsUpdate();
   }
 
-  /// Updates the semantic information of the render object.
-  void _updateSemantics() {
-    assert(_semanticsConfiguration.isSemanticBoundary || parent is! RenderObject);
-    if (_needsLayout) {
-      // There's not enough information in this subtree to compute semantics.
-      // The subtree is probably being kept alive by a viewport but not laid out.
-      return;
-    }
-    final _SemanticsFragment fragment = _getSemanticsForParent(
-      mergeIntoParent: _semantics?.parent?.isPartOfNodeMerging ?? false,
-    );
-    assert(fragment is _InterestingSemanticsFragment);
-    final _InterestingSemanticsFragment interestingFragment = fragment as _InterestingSemanticsFragment;
-    final List<SemanticsNode> result = <SemanticsNode>[];
-    interestingFragment.compileChildren(
-      parentSemanticsClipRect: _semantics?.parentSemanticsClipRect,
-      parentPaintClipRect: _semantics?.parentPaintClipRect,
-      elevationAdjustment: _semantics?.elevationAdjustment ?? 0.0,
-      result: result,
-    );
-    final SemanticsNode node = result.single;
-    // Fragment only wants to add this node's SemanticsNode to the parent.
-    assert(interestingFragment.config == null && node == _semantics);
-  }
-
-  /// Returns the semantics that this node would like to add to its parent.
-  _SemanticsFragment _getSemanticsForParent({
-    required bool mergeIntoParent,
-  }) {
-    assert(mergeIntoParent != null);
-    assert(!_needsLayout, 'Updated layout information required for $this to calculate semantics.');
-
-    final SemanticsConfiguration config = _semanticsConfiguration;
-    bool dropSemanticsOfPreviousSiblings = config.isBlockingSemanticsOfPreviouslyPaintedNodes;
-
-    final bool producesForkingFragment = !config.hasBeenAnnotated && !config.isSemanticBoundary;
-    final List<_InterestingSemanticsFragment> fragments = <_InterestingSemanticsFragment>[];
-    final Set<_InterestingSemanticsFragment> toBeMarkedExplicit = <_InterestingSemanticsFragment>{};
-    final bool childrenMergeIntoParent = mergeIntoParent || config.isMergingSemanticsOfDescendants;
-
-    visitChildrenForSemantics((RenderObject renderChild) {
-      assert(!_needsLayout);
-      final _SemanticsFragment parentFragment = renderChild._getSemanticsForParent(
-        mergeIntoParent: childrenMergeIntoParent,
-      );
-      if (parentFragment.dropsSemanticsOfPreviousSiblings) {
-        fragments.clear();
-        toBeMarkedExplicit.clear();
-        if (!config.isSemanticBoundary) {
-          dropSemanticsOfPreviousSiblings = true;
-        }
-      }
-      // Figure out which child fragments are to be made explicit.
-      for (final _InterestingSemanticsFragment fragment in parentFragment.interestingFragments) {
-        fragments.add(fragment);
-        fragment.addAncestor(this);
-        fragment.addTags(config.tagsForChildren);
-        if (config.explicitChildNodes || parent is! RenderObject) {
-          fragment.markAsExplicit();
-          continue;
-        }
-        if (!fragment.hasConfigForParent || producesForkingFragment) {
-          continue;
-        }
-        if (!config.isCompatibleWith(fragment.config)) {
-          toBeMarkedExplicit.add(fragment);
-        }
-        final int siblingLength = fragments.length - 1;
-        for (int i = 0; i < siblingLength; i += 1) {
-          final _InterestingSemanticsFragment siblingFragment = fragments[i];
-          if (!fragment.config!.isCompatibleWith(siblingFragment.config)) {
-            toBeMarkedExplicit.add(fragment);
-            toBeMarkedExplicit.add(siblingFragment);
-          }
-        }
-      }
-    });
-
-    for (final _InterestingSemanticsFragment fragment in toBeMarkedExplicit) {
-      fragment.markAsExplicit();
-    }
-
-    _needsSemanticsUpdate = false;
-
-    _SemanticsFragment result;
-    if (parent is! RenderObject) {
-      assert(!config.hasBeenAnnotated);
-      assert(!mergeIntoParent);
-      result = _RootSemanticsFragment(
-        owner: this,
-        dropsSemanticsOfPreviousSiblings: dropSemanticsOfPreviousSiblings,
-      );
-    } else if (producesForkingFragment) {
-      result = _ContainerSemanticsFragment(
-        dropsSemanticsOfPreviousSiblings: dropSemanticsOfPreviousSiblings,
-      );
-    } else {
-      result = _SwitchableSemanticsFragment(
-        config: config,
-        mergeIntoParent: mergeIntoParent,
-        owner: this,
-        dropsSemanticsOfPreviousSiblings: dropSemanticsOfPreviousSiblings,
-      );
-      if (config.isSemanticBoundary) {
-        final _SwitchableSemanticsFragment fragment = result as _SwitchableSemanticsFragment;
-        fragment.markAsExplicit();
-      }
-    }
-
-    result.addAll(fragments);
-
-    return result;
-  }
+  late final _RenderObjectSemantics _semantics = _RenderObjectSemantics(this);
 
   /// Called when collecting the semantics of this node.
   ///
@@ -3300,7 +3828,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     SemanticsConfiguration config,
     Iterable<SemanticsNode> children,
   ) {
-    assert(node == _semantics);
+    assert(node == _semantics.cachedSemanticsNode);
     // TODO(a14n): remove the following cast by updating type of parameter in either updateWith or assembleSemanticsNode
     node.updateWith(config: config, childrenInInversePaintOrder: children as List<SemanticsNode>);
   }
@@ -3309,8 +3837,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
 
   /// Override this method to handle pointer events that hit this render object.
   @override
-  void handleEvent(PointerEvent event, covariant HitTestEntry entry) { }
-
+  void handleEvent(PointerEvent event, covariant HitTestEntry entry) {}
 
   // HIT TESTING
 
@@ -3318,7 +3845,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
   // (with the signature being whatever passes for coordinates for this
   // particular class):
   //
-  // bool hitTest(HitTestResult result, { Offset position }) {
+  // bool hitTest(HitTestResult result, { required Offset position }) {
   //   // If the given position is not inside this node, then return false.
   //   // Otherwise:
   //   // For each child that intersects the position, in z-order starting from
@@ -3331,7 +3858,6 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
   // If you add yourself to /result/ and still return false, then that means you
   // will see events but so will objects below you.
 
-
   /// Returns a human understandable name.
   @override
   String toStringShort() {
@@ -3343,9 +3869,9 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
       }
       if (_relayoutBoundary != null && _relayoutBoundary != this) {
         int count = 1;
-        RenderObject? target = parent as RenderObject?;
+        RenderObject? target = parent;
         while (target != null && target != _relayoutBoundary) {
-          target = target.parent as RenderObject?;
+          target = target.parent;
           count += 1;
         }
         header += ' relayoutBoundary=up$count';
@@ -3367,7 +3893,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
   }
 
   @override
-  String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) => toStringShort();
+  String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) => toStringShort();
 
   /// Returns a description of the tree rooted at this node.
   /// If the prefix argument is provided, then every line in the output
@@ -3377,23 +3903,16 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     String prefixLineOne = '',
     String? prefixOtherLines = '',
     DiagnosticLevel minLevel = DiagnosticLevel.debug,
+    int wrapWidth = 65,
   }) {
-    RenderObject? debugPreviousActiveLayout;
-    assert(() {
-      debugPreviousActiveLayout = _debugActiveLayout;
-      _debugActiveLayout = null;
-      return true;
-    }());
-    final String result = super.toStringDeep(
-      prefixLineOne: prefixLineOne,
-      prefixOtherLines: prefixOtherLines,
-      minLevel: minLevel,
+    return _withDebugActiveLayoutCleared(
+      () => super.toStringDeep(
+        prefixLineOne: prefixLineOne,
+        prefixOtherLines: prefixOtherLines,
+        minLevel: minLevel,
+        wrapWidth: wrapWidth,
+      ),
     );
-    assert(() {
-      _debugActiveLayout = debugPreviousActiveLayout;
-      return true;
-    }());
-    return result;
   }
 
   /// Returns a one-line detailed description of the render object.
@@ -3402,41 +3921,59 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
   /// This includes the same information for this RenderObject as given by
   /// [toStringDeep], but does not recurse to any children.
   @override
-  String toStringShallow({
-    String joiner = ', ',
-    DiagnosticLevel minLevel = DiagnosticLevel.debug,
-  }) {
-    RenderObject? debugPreviousActiveLayout;
-    assert(() {
-      debugPreviousActiveLayout = _debugActiveLayout;
-      _debugActiveLayout = null;
-      return true;
-    }());
-    final String result = super.toStringShallow(joiner: joiner, minLevel: minLevel);
-    assert(() {
-      _debugActiveLayout = debugPreviousActiveLayout;
-      return true;
-    }());
-    return result;
+  String toStringShallow({String joiner = ', ', DiagnosticLevel minLevel = DiagnosticLevel.debug}) {
+    return _withDebugActiveLayoutCleared(
+      () => super.toStringShallow(joiner: joiner, minLevel: minLevel),
+    );
   }
 
   @protected
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
-    properties.add(FlagProperty('needsCompositing', value: _needsCompositing, ifTrue: 'needs compositing'));
-    properties.add(DiagnosticsProperty<Object?>('creator', debugCreator, defaultValue: null, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<ParentData>('parentData', parentData, tooltip: (_debugCanParentUseSize ?? false) ? 'can use size' : null, missingIfNull: true));
-    properties.add(DiagnosticsProperty<Constraints>('constraints', _constraints, missingIfNull: true));
+    properties.add(
+      FlagProperty('needsCompositing', value: _needsCompositing, ifTrue: 'needs compositing'),
+    );
+    properties.add(
+      DiagnosticsProperty<Object?>(
+        'creator',
+        debugCreator,
+        defaultValue: null,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<ParentData>(
+        'parentData',
+        parentData,
+        tooltip: (_debugCanParentUseSize ?? false) ? 'can use size' : null,
+        missingIfNull: true,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<Constraints>('constraints', _constraints, missingIfNull: true),
+    );
     // don't access it via the "layer" getter since that's only valid when we don't need paint
-    properties.add(DiagnosticsProperty<ContainerLayer>('layer', _layerHandle.layer, defaultValue: null));
-    properties.add(DiagnosticsProperty<SemanticsNode>('semantics node', _semantics, defaultValue: null));
-    properties.add(FlagProperty(
-      'isBlockingSemanticsOfPreviouslyPaintedNodes',
-      value: _semanticsConfiguration.isBlockingSemanticsOfPreviouslyPaintedNodes,
-      ifTrue: 'blocks semantics of earlier render objects below the common boundary',
-    ));
-    properties.add(FlagProperty('isSemanticBoundary', value: _semanticsConfiguration.isSemanticBoundary, ifTrue: 'semantic boundary'));
+    properties.add(
+      DiagnosticsProperty<ContainerLayer>('layer', _layerHandle.layer, defaultValue: null),
+    );
+    properties.add(
+      DiagnosticsProperty<SemanticsNode>('semantics node', debugSemantics, defaultValue: null),
+    );
+    properties.add(
+      FlagProperty(
+        'isBlockingSemanticsOfPreviouslyPaintedNodes',
+        value: _semantics.configProvider.effective.isBlockingSemanticsOfPreviouslyPaintedNodes,
+        ifTrue: 'blocks semantics of earlier render objects below the common boundary',
+      ),
+    );
+    properties.add(
+      FlagProperty(
+        'isSemanticBoundary',
+        value: _semantics.configProvider.effective.isSemanticBoundary,
+        ifTrue: 'semantic boundary',
+      ),
+    );
   }
 
   @override
@@ -3469,8 +4006,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     Curve curve = Curves.ease,
   }) {
     if (parent is RenderObject) {
-      final RenderObject renderParent = parent! as RenderObject;
-      renderParent.showOnScreen(
+      parent!.showOnScreen(
         descendant: descendant ?? this,
         rect: rect,
         duration: duration,
@@ -3488,7 +4024,10 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
   ///
   /// You should always include a RenderObject in an error message if it is the
   /// [RenderObject] causing the failure or contract violation of the error.
-  DiagnosticsNode describeForError(String name, { DiagnosticsTreeStyle style = DiagnosticsTreeStyle.shallow }) {
+  DiagnosticsNode describeForError(
+    String name, {
+    DiagnosticsTreeStyle style = DiagnosticsTreeStyle.shallow,
+  }) {
     return toDiagnosticsNode(name: name, style: style);
   }
 }
@@ -3501,7 +4040,6 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
 /// This mixin is typically used to implement render objects created
 /// in a [SingleChildRenderObjectWidget].
 mixin RenderObjectWithChildMixin<ChildType extends RenderObject> on RenderObject {
-
   /// Checks whether the given render object has the correct [runtimeType] to be
   /// a child of this render object.
   ///
@@ -3543,6 +4081,7 @@ mixin RenderObjectWithChildMixin<ChildType extends RenderObject> on RenderObject
   }
 
   ChildType? _child;
+
   /// The render object's unique child.
   ChildType? get child => _child;
   set child(ChildType? value) {
@@ -3558,17 +4097,13 @@ mixin RenderObjectWithChildMixin<ChildType extends RenderObject> on RenderObject
   @override
   void attach(PipelineOwner owner) {
     super.attach(owner);
-    if (_child != null) {
-      _child!.attach(owner);
-    }
+    _child?.attach(owner);
   }
 
   @override
   void detach() {
     super.detach();
-    if (_child != null) {
-      _child!.detach();
-    }
+    _child?.detach();
   }
 
   @override
@@ -3587,7 +4122,9 @@ mixin RenderObjectWithChildMixin<ChildType extends RenderObject> on RenderObject
 
   @override
   List<DiagnosticsNode> debugDescribeChildren() {
-    return child != null ? <DiagnosticsNode>[child!.toDiagnosticsNode(name: 'child')] : <DiagnosticsNode>[];
+    return child != null
+        ? <DiagnosticsNode>[child!.toDiagnosticsNode(name: 'child')]
+        : <DiagnosticsNode>[];
   }
 }
 
@@ -3600,13 +4137,17 @@ mixin RenderObjectWithChildMixin<ChildType extends RenderObject> on RenderObject
 mixin ContainerParentDataMixin<ChildType extends RenderObject> on ParentData {
   /// The previous sibling in the parent's child list.
   ChildType? previousSibling;
+
   /// The next sibling in the parent's child list.
   ChildType? nextSibling;
 
   /// Clear the sibling pointers.
   @override
   void detach() {
-    assert(previousSibling == null, 'Pointers to siblings must be nulled before detaching ParentData.');
+    assert(
+      previousSibling == null,
+      'Pointers to siblings must be nulled before detaching ParentData.',
+    );
     assert(nextSibling == null, 'Pointers to siblings must be nulled before detaching ParentData.');
     super.detach();
   }
@@ -3635,8 +4176,12 @@ mixin ContainerParentDataMixin<ChildType extends RenderObject> on ParentData {
 ///
 ///  * [SlottedContainerRenderObjectMixin], which organizes its children
 ///    in different named slots.
-mixin ContainerRenderObjectMixin<ChildType extends RenderObject, ParentDataType extends ContainerParentDataMixin<ChildType>> on RenderObject {
-  bool _debugUltimatePreviousSiblingOf(ChildType child, { ChildType? equals }) {
+mixin ContainerRenderObjectMixin<
+  ChildType extends RenderObject,
+  ParentDataType extends ContainerParentDataMixin<ChildType>
+>
+    on RenderObject {
+  bool _debugUltimatePreviousSiblingOf(ChildType child, {ChildType? equals}) {
     ParentDataType childParentData = child.parentData! as ParentDataType;
     while (childParentData.previousSibling != null) {
       assert(childParentData.previousSibling != child);
@@ -3645,7 +4190,8 @@ mixin ContainerRenderObjectMixin<ChildType extends RenderObject, ParentDataType 
     }
     return child == equals;
   }
-  bool _debugUltimateNextSiblingOf(ChildType child, { ChildType? equals }) {
+
+  bool _debugUltimateNextSiblingOf(ChildType child, {ChildType? equals}) {
     ParentDataType childParentData = child.parentData! as ParentDataType;
     while (childParentData.nextSibling != null) {
       assert(childParentData.nextSibling != child);
@@ -3656,6 +4202,7 @@ mixin ContainerRenderObjectMixin<ChildType extends RenderObject, ParentDataType 
   }
 
   int _childCount = 0;
+
   /// The number of children.
   int get childCount => _childCount;
 
@@ -3701,7 +4248,7 @@ mixin ContainerRenderObjectMixin<ChildType extends RenderObject, ParentDataType 
 
   ChildType? _firstChild;
   ChildType? _lastChild;
-  void _insertIntoChildList(ChildType child, { ChildType? after }) {
+  void _insertIntoChildList(ChildType child, {ChildType? after}) {
     final ParentDataType childParentData = child.parentData! as ParentDataType;
     assert(childParentData.nextSibling == null);
     assert(childParentData.previousSibling == null);
@@ -3734,8 +4281,10 @@ mixin ContainerRenderObjectMixin<ChildType extends RenderObject, ParentDataType 
         childParentData.nextSibling = afterParentData.nextSibling;
         childParentData.previousSibling = after;
         // set up links from siblings to child
-        final ParentDataType childPreviousSiblingParentData = childParentData.previousSibling!.parentData! as ParentDataType;
-        final ParentDataType childNextSiblingParentData = childParentData.nextSibling!.parentData! as ParentDataType;
+        final ParentDataType childPreviousSiblingParentData =
+            childParentData.previousSibling!.parentData! as ParentDataType;
+        final ParentDataType childNextSiblingParentData =
+            childParentData.nextSibling!.parentData! as ParentDataType;
         childPreviousSiblingParentData.nextSibling = child;
         childNextSiblingParentData.previousSibling = child;
         assert(afterParentData.nextSibling == child);
@@ -3747,13 +4296,22 @@ mixin ContainerRenderObjectMixin<ChildType extends RenderObject, ParentDataType 
   ///
   /// If `after` is null, then this inserts the child at the start of the list,
   /// and the child becomes the new [firstChild].
-  void insert(ChildType child, { ChildType? after }) {
+  void insert(ChildType child, {ChildType? after}) {
     assert(child != this, 'A RenderObject cannot be inserted into itself.');
-    assert(after != this, 'A RenderObject cannot simultaneously be both the parent and the sibling of another RenderObject.');
+    assert(
+      after != this,
+      'A RenderObject cannot simultaneously be both the parent and the sibling of another RenderObject.',
+    );
     assert(child != after, 'A RenderObject cannot be inserted after itself.');
     assert(child != _firstChild);
     assert(child != _lastChild);
     adoptChild(child);
+    assert(
+      child.parentData is ParentDataType,
+      'A child of $runtimeType has parentData of type ${child.parentData.runtimeType}, '
+      'which does not conform to $ParentDataType. Class using ContainerRenderObjectMixin '
+      'should override setupParentData() to set parentData to type $ParentDataType.',
+    );
     _insertIntoChildList(child, after: after);
   }
 
@@ -3776,14 +4334,16 @@ mixin ContainerRenderObjectMixin<ChildType extends RenderObject, ParentDataType 
       assert(_firstChild == child);
       _firstChild = childParentData.nextSibling;
     } else {
-      final ParentDataType childPreviousSiblingParentData = childParentData.previousSibling!.parentData! as ParentDataType;
+      final ParentDataType childPreviousSiblingParentData =
+          childParentData.previousSibling!.parentData! as ParentDataType;
       childPreviousSiblingParentData.nextSibling = childParentData.nextSibling;
     }
     if (childParentData.nextSibling == null) {
       assert(_lastChild == child);
       _lastChild = childParentData.previousSibling;
     } else {
-      final ParentDataType childNextSiblingParentData = childParentData.nextSibling!.parentData! as ParentDataType;
+      final ParentDataType childNextSiblingParentData =
+          childParentData.nextSibling!.parentData! as ParentDataType;
       childNextSiblingParentData.previousSibling = childParentData.previousSibling;
     }
     childParentData.previousSibling = null;
@@ -3822,7 +4382,7 @@ mixin ContainerRenderObjectMixin<ChildType extends RenderObject, ParentDataType 
   /// More efficient than removing and re-adding the child. Requires the child
   /// to already be in the child list at some position. Pass null for `after` to
   /// move the child to the start of the child list.
-  void move(ChildType child, { ChildType? after }) {
+  void move(ChildType child, {ChildType? after}) {
     assert(child != this);
     assert(after != this);
     assert(child != after);
@@ -3886,7 +4446,6 @@ mixin ContainerRenderObjectMixin<ChildType extends RenderObject, ParentDataType 
 
   /// The previous child before the given child in the child list.
   ChildType? childBefore(ChildType child) {
-    assert(child != null);
     assert(child.parent == this);
     final ParentDataType childParentData = child.parentData! as ParentDataType;
     return childParentData.previousSibling;
@@ -3894,7 +4453,6 @@ mixin ContainerRenderObjectMixin<ChildType extends RenderObject, ParentDataType 
 
   /// The next child after the given child in the child list.
   ChildType? childAfter(ChildType child) {
-    assert(child != null);
     assert(child.parent == this);
     final ParentDataType childParentData = child.parentData! as ParentDataType;
     return childParentData.nextSibling;
@@ -3923,12 +4481,16 @@ mixin ContainerRenderObjectMixin<ChildType extends RenderObject, ParentDataType 
 /// Mixin for [RenderObject] that will call [systemFontsDidChange] whenever the
 /// system fonts change.
 ///
-/// System fonts can change when the OS install or remove a font. Use this mixin if
-/// the [RenderObject] uses [TextPainter] or [Paragraph] to correctly update the
-/// text when it happens.
+/// System fonts can change when the OS installs or removes a font. Use this
+/// mixin if the [RenderObject] uses [TextPainter] or [Paragraph] to correctly
+/// update the text when it happens.
 mixin RelayoutWhenSystemFontsChangeMixin on RenderObject {
-
   /// A callback that is called when system fonts have changed.
+  ///
+  /// The framework defers the invocation of the callback to the
+  /// [SchedulerPhase.transientCallbacks] phase to ensure that the
+  /// [RenderObject]'s text layout is still valid when user interactions are in
+  /// progress (which usually take place during the [SchedulerPhase.idle] phase).
   ///
   /// By default, [markNeedsLayout] is called on the [RenderObject]
   /// implementing this mixin.
@@ -3941,433 +4503,1387 @@ mixin RelayoutWhenSystemFontsChangeMixin on RenderObject {
     markNeedsLayout();
   }
 
+  bool _hasPendingSystemFontsDidChangeCallBack = false;
+  void _scheduleSystemFontsUpdate() {
+    assert(
+      SchedulerBinding.instance.schedulerPhase == SchedulerPhase.idle,
+      '${objectRuntimeType(this, "RelayoutWhenSystemFontsChangeMixin")}._scheduleSystemFontsUpdate() '
+      'called during ${SchedulerBinding.instance.schedulerPhase}.',
+    );
+    if (_hasPendingSystemFontsDidChangeCallBack) {
+      return;
+    }
+    _hasPendingSystemFontsDidChangeCallBack = true;
+    SchedulerBinding.instance.scheduleFrameCallback((Duration timeStamp) {
+      assert(_hasPendingSystemFontsDidChangeCallBack);
+      _hasPendingSystemFontsDidChangeCallBack = false;
+      assert(
+        attached || (debugDisposed ?? true),
+        '$this is detached during ${SchedulerBinding.instance.schedulerPhase} but is not disposed.',
+      );
+      if (attached) {
+        systemFontsDidChange();
+      }
+    });
+  }
+
   @override
-  void attach(covariant PipelineOwner owner) {
+  void attach(PipelineOwner owner) {
     super.attach(owner);
-    PaintingBinding.instance.systemFonts.addListener(systemFontsDidChange);
+    // If there's a pending callback that would imply this node was detached
+    // between the idle phase and the next transientCallbacks phase. The tree
+    // can not be mutated between those two phases so that should never happen.
+    assert(!_hasPendingSystemFontsDidChangeCallBack);
+    PaintingBinding.instance.systemFonts.addListener(_scheduleSystemFontsUpdate);
   }
 
   @override
   void detach() {
-    PaintingBinding.instance.systemFonts.removeListener(systemFontsDidChange);
+    assert(!_hasPendingSystemFontsDidChangeCallBack);
+    PaintingBinding.instance.systemFonts.removeListener(_scheduleSystemFontsUpdate);
     super.detach();
   }
 }
 
-/// Describes the semantics information a [RenderObject] wants to add to its
-/// parent.
-///
-/// It has two notable subclasses:
-///  * [_InterestingSemanticsFragment] describing actual semantic information to
-///    be added to the parent.
-///  * [_ContainerSemanticsFragment]: a container class to transport the semantic
-///    information of multiple [_InterestingSemanticsFragment] to a parent.
-abstract class _SemanticsFragment {
-  _SemanticsFragment({ required this.dropsSemanticsOfPreviousSiblings })
-    : assert (dropsSemanticsOfPreviousSiblings != null);
-
-  /// Incorporate the fragments of children into this fragment.
-  void addAll(Iterable<_InterestingSemanticsFragment> fragments);
-
-  /// Whether this fragment wants to make the semantics information of
-  /// previously painted [RenderObject]s unreachable for accessibility purposes.
-  ///
-  /// See also:
-  ///
-  ///  * [SemanticsConfiguration.isBlockingSemanticsOfPreviouslyPaintedNodes]
-  ///    describes what semantics are dropped in more detail.
-  final bool dropsSemanticsOfPreviousSiblings;
-
-  /// Returns [_InterestingSemanticsFragment] describing the actual semantic
-  /// information that this fragment wants to add to the parent.
-  List<_InterestingSemanticsFragment> get interestingFragments;
-}
-
-/// A container used when a [RenderObject] wants to add multiple independent
-/// [_InterestingSemanticsFragment] to its parent.
-///
-/// The [_InterestingSemanticsFragment] to be added to the parent can be
-/// obtained via [interestingFragments].
-class _ContainerSemanticsFragment extends _SemanticsFragment {
-
-  _ContainerSemanticsFragment({ required super.dropsSemanticsOfPreviousSiblings });
-
-  @override
-  void addAll(Iterable<_InterestingSemanticsFragment> fragments) {
-    interestingFragments.addAll(fragments);
-  }
-
-  @override
-  final List<_InterestingSemanticsFragment> interestingFragments = <_InterestingSemanticsFragment>[];
-}
-
-/// A [_SemanticsFragment] that describes which concrete semantic information
-/// a [RenderObject] wants to add to the [SemanticsNode] of its parent.
-///
-/// Specifically, it describes which children (as returned by [compileChildren])
-/// should be added to the parent's [SemanticsNode] and which [config] should be
-/// merged into the parent's [SemanticsNode].
-abstract class _InterestingSemanticsFragment extends _SemanticsFragment {
-  _InterestingSemanticsFragment({
-    required RenderObject owner,
-    required super.dropsSemanticsOfPreviousSiblings,
-  }) : assert(owner != null),
-       _ancestorChain = <RenderObject>[owner];
-
-  /// The [RenderObject] that owns this fragment (and any new [SemanticsNode]
-  /// introduced by it).
-  RenderObject get owner => _ancestorChain.first;
-
-  final List<RenderObject> _ancestorChain;
-
-  /// The children to be added to the parent.
-  ///
-  /// See also:
-  ///
-  ///  * [SemanticsNode.parentSemanticsClipRect] for the source and definition
-  ///    of the `parentSemanticsClipRect` argument.
-  ///  * [SemanticsNode.parentPaintClipRect] for the source and definition
-  ///    of the `parentPaintClipRect` argument.
-  ///  * [SemanticsNode.elevationAdjustment] for the source and definition
-  ///    of the `elevationAdjustment` argument.
-  void compileChildren({
-    required Rect? parentSemanticsClipRect,
-    required Rect? parentPaintClipRect,
-    required double elevationAdjustment,
-    required List<SemanticsNode> result,
+/// Properties of _RenderObjectSemantics that are imposed from parent.
+@immutable
+final class _SemanticsParentData {
+  const _SemanticsParentData({
+    required this.mergeIntoParent,
+    required this.blocksUserActions,
+    required this.explicitChildNodes,
+    required this.tagsForChildren,
   });
 
-  /// The [SemanticsConfiguration] the child wants to merge into the parent's
-  /// [SemanticsNode] or null if it doesn't want to merge anything.
-  SemanticsConfiguration? get config;
-
-  /// Disallows this fragment to merge any configuration into its parent's
-  /// [SemanticsNode].
+  /// Whether [SemanticsNode]s created from this render object semantics subtree
+  /// will be merged into parent.
   ///
-  /// After calling this the fragment will only produce children to be added
-  /// to the parent and it will return null for [config].
-  void markAsExplicit();
+  /// This is imposed by render objects of parent [MergeSemantics]s.
+  final bool mergeIntoParent;
 
-  /// Consume the fragments of children.
+  /// Whether [SemanticsNode]s created from this render object semantics subtree
+  /// ignores user action such as [SemanticsAction.tap] and its friends.
   ///
-  /// For each provided fragment it will add that fragment's children to
-  /// this fragment's children (as returned by [compileChildren]) and merge that
-  /// fragment's [config] into this fragment's [config].
-  ///
-  /// If a provided fragment should not merge anything into [config] call
-  /// [markAsExplicit] before passing the fragment to this method.
-  @override
-  void addAll(Iterable<_InterestingSemanticsFragment> fragments);
+  /// This is imposed by render objects of parent [IgnorePointer]s or
+  /// [AbsorbPointer]s.
+  final bool blocksUserActions;
 
-  /// Whether this fragment wants to add any semantic information to the parent
-  /// [SemanticsNode].
-  bool get hasConfigForParent => config != null;
+  /// Any immediate render object semantics that
+  /// [_RenderObjectSemantics.contributesToSemanticsTree] should forms a node
+  ///
+  /// This is imposed by parent render objects that set
+  /// [SemanticsConfiguration.explicitChildNodes] to true.
+  final bool explicitChildNodes;
+
+  /// Tags for immediate render object semantics that
+  /// [_RenderObjectSemantics.shouldFormSemanticsNode] is true.
+  final Set<SemanticsTag>? tagsForChildren;
 
   @override
-  List<_InterestingSemanticsFragment> get interestingFragments => <_InterestingSemanticsFragment>[this];
-
-  Set<SemanticsTag>? _tagsForChildren;
-
-  /// Tag all children produced by [compileChildren] with `tags`.
-  void addTags(Iterable<SemanticsTag>? tags) {
-    if (tags == null || tags.isEmpty) {
-      return;
-    }
-    _tagsForChildren ??= <SemanticsTag>{};
-    _tagsForChildren!.addAll(tags);
+  bool operator ==(Object other) {
+    return other is _SemanticsParentData &&
+        other.mergeIntoParent == mergeIntoParent &&
+        other.blocksUserActions == blocksUserActions &&
+        other.explicitChildNodes == explicitChildNodes &&
+        setEquals<SemanticsTag>(other.tagsForChildren, tagsForChildren);
   }
 
-  /// Adds the geometric information of `ancestor` to this object.
-  ///
-  /// Those information are required to properly compute the value for
-  /// [SemanticsNode.transform], [SemanticsNode.clipRect], and
-  /// [SemanticsNode.rect].
-  ///
-  /// Ancestors have to be added in order from [owner] up until the next
-  /// [RenderObject] that owns a [SemanticsNode] is reached.
-  void addAncestor(RenderObject ancestor) {
-    _ancestorChain.add(ancestor);
-  }
-}
-
-/// An [_InterestingSemanticsFragment] that produces the root [SemanticsNode] of
-/// the semantics tree.
-///
-/// The root node is available as the only element in the Iterable returned by
-/// [children].
-class _RootSemanticsFragment extends _InterestingSemanticsFragment {
-  _RootSemanticsFragment({
-    required super.owner,
-    required super.dropsSemanticsOfPreviousSiblings,
-  });
-
   @override
-  void compileChildren({ Rect? parentSemanticsClipRect, Rect? parentPaintClipRect, required double elevationAdjustment, required List<SemanticsNode> result }) {
-    assert(_tagsForChildren == null || _tagsForChildren!.isEmpty);
-    assert(parentSemanticsClipRect == null);
-    assert(parentPaintClipRect == null);
-    assert(_ancestorChain.length == 1);
-    assert(elevationAdjustment == 0.0);
-
-    owner._semantics ??= SemanticsNode.root(
-      showOnScreen: owner.showOnScreen,
-      owner: owner.owner!.semanticsOwner!,
+  int get hashCode {
+    return Object.hash(
+      mergeIntoParent,
+      blocksUserActions,
+      explicitChildNodes,
+      Object.hashAllUnordered(tagsForChildren ?? const <SemanticsTag>{}),
     );
-    final SemanticsNode node = owner._semantics!;
-    assert(MatrixUtils.matrixEquals(node.transform, Matrix4.identity()));
-    assert(node.parentSemanticsClipRect == null);
-    assert(node.parentPaintClipRect == null);
+  }
+}
 
-    node.rect = owner.semanticBounds;
+/// A wrapper class that handles the life cycle of the [SemanticsConfiguration]
+/// of a [RenderObject].
+///
+/// Typically, this class calls [RenderObject.describeSemanticsConfiguration] to
+/// update the config and owner of this object does not directly mutate the
+/// the config.
+///
+/// In some cases during [PipelineOwner.flushSemantics], the config has to be
+/// mutated due to [_SemanticsParentData] update to propagate updated property
+/// to semantics node. One should use [updateConfig] to update the config in this
+/// case.
+///
+/// To access the config stored in this wrapper, uses
+/// [_SemanticsConfigurationProvider.effective] to access the latest config.
+/// Uses [_SemanticsConfigurationProvider.original] if one wants to access the
+/// raw config without post mutations.
+class _SemanticsConfigurationProvider {
+  _SemanticsConfigurationProvider(this._renderObject);
 
-    final List<SemanticsNode> children = <SemanticsNode>[];
-    for (final _InterestingSemanticsFragment fragment in _children) {
-      assert(fragment.config == null);
-      fragment.compileChildren(
-        parentSemanticsClipRect: parentSemanticsClipRect,
-        parentPaintClipRect: parentPaintClipRect,
-        elevationAdjustment: 0.0,
-        result: children,
+  /// The owning rendering object for this object.
+  final RenderObject _renderObject;
+
+  bool _isEffectiveConfigWritable = false;
+  SemanticsConfiguration? _originalConfiguration;
+  SemanticsConfiguration? _effectiveConfiguration;
+
+  bool get wasSemanticsBoundary => _originalConfiguration?.isSemanticBoundary ?? false;
+
+  /// The latest config that reflect any change done through [updateConfig].
+  SemanticsConfiguration get effective {
+    return _effectiveConfiguration ?? original;
+  }
+
+  /// The original config without any change through [updateConfig].
+  ///
+  /// This is typically use to recalculate certain properties when mutating
+  /// [effective] since [effective] may contain stale data from previous update.
+  /// Examples are [SemanticsConfiguration.isBlockingUserActions] or
+  /// [SemanticsConfiguration.elevation]. Otherwise, use [effective] instead.
+  SemanticsConfiguration get original {
+    if (_originalConfiguration == null) {
+      _effectiveConfiguration = _originalConfiguration = SemanticsConfiguration();
+      _renderObject.describeSemanticsConfiguration(_originalConfiguration!);
+      assert(
+        !_originalConfiguration!.explicitChildNodes ||
+            _originalConfiguration!.childConfigurationsDelegate == null,
+        'A SemanticsConfiguration with explicitChildNode set to true cannot have a non-null childConfigsDelegate.',
       );
     }
-    node.updateWith(config: null, childrenInInversePaintOrder: children);
-
-    // The root node is the only semantics node allowed to be invisible. This
-    // can happen when the canvas the app is drawn on has a size of 0 by 0
-    // pixel. If this happens, the root node must not have any children (because
-    // these would be invisible as well and are therefore excluded from the
-    // tree).
-    assert(!node.isInvisible || children.isEmpty);
-    result.add(node);
+    return _originalConfiguration!;
   }
 
-  @override
-  SemanticsConfiguration? get config => null;
-
-  final List<_InterestingSemanticsFragment> _children = <_InterestingSemanticsFragment>[];
-
-  @override
-  void markAsExplicit() {
-    // nothing to do, we are always explicit.
+  /// Mutates the config
+  ///
+  /// This does not change the [original], and the change reflects in
+  /// [effective].
+  void updateConfig(ValueSetter<SemanticsConfiguration> callback) {
+    if (!_isEffectiveConfigWritable) {
+      _effectiveConfiguration = original.copy();
+      _isEffectiveConfigWritable = true;
+    }
+    callback(_effectiveConfiguration!);
   }
 
-  @override
-  void addAll(Iterable<_InterestingSemanticsFragment> fragments) {
-    _children.addAll(fragments);
+  /// Absorb a list of config into [effective].
+  void absorbAll(Iterable<SemanticsConfiguration> configs) {
+    updateConfig((SemanticsConfiguration config) {
+      configs.forEach(config.absorb);
+    });
+  }
+
+  /// Reset any post mutation to [effective].
+  void reset() {
+    _effectiveConfiguration = original;
+    _isEffectiveConfigWritable = false;
+  }
+
+  /// Remove every cache in this wrapper.
+  ///
+  /// This cause the [RenderObject.describeSemanticsConfiguration] to be
+  /// re-evaluated next time [effective] or [original] is called.
+  void clear() {
+    _isEffectiveConfigWritable = false;
+    _effectiveConfiguration = null;
+    _originalConfiguration = null;
   }
 }
 
-/// An [_InterestingSemanticsFragment] that can be told to only add explicit
-/// [SemanticsNode]s to the parent.
+/// A convenient abstract interface used for constructing the
+/// [_RenderObjectSemantics] tree.
 ///
-/// If [markAsExplicit] was not called before this fragment is added to
-/// another fragment it will merge [config] into the parent's [SemanticsNode]
-/// and add its [children] to it.
-///
-/// If [markAsExplicit] was called before adding this fragment to another
-/// fragment it will create a new [SemanticsNode]. The newly created node will
-/// be annotated with the [SemanticsConfiguration] that - without the call to
-/// [markAsExplicit] - would have been merged into the parent's [SemanticsNode].
-/// Similarly, the new node will also take over the children that otherwise
-/// would have been added to the parent's [SemanticsNode].
-///
-/// After a call to [markAsExplicit] the only element returned by [children]
-/// is the newly created node and [config] will return null as the fragment
-/// no longer wants to merge any semantic information into the parent's
-/// [SemanticsNode].
-class _SwitchableSemanticsFragment extends _InterestingSemanticsFragment {
-  _SwitchableSemanticsFragment({
-    required bool mergeIntoParent,
-    required SemanticsConfiguration config,
-    required super.owner,
-    required super.dropsSemanticsOfPreviousSiblings,
-  }) : _mergeIntoParent = mergeIntoParent,
-       _config = config,
-       assert(mergeIntoParent != null),
-       assert(config != null);
+/// The _SemanticsFragment can be an [_IncompleteSemanticsFragment] or a
+/// [_RenderObjectSemantics]. This interface is used so that
+/// [_RenderObjectSemantics] can handle semantics configuration merging without
+/// knowing whether the child fragment is backed by a render object or an
+/// incomplete semantics fragment.
+abstract class _SemanticsFragment {
+  SemanticsConfiguration? get configToMergeUp;
 
-  final bool _mergeIntoParent;
-  SemanticsConfiguration _config;
-  bool _isConfigWritable = false;
-  final List<_InterestingSemanticsFragment> _children = <_InterestingSemanticsFragment>[];
+  _RenderObjectSemantics get owner;
+
+  bool mergesToSibling = false;
+
+  void markSiblingConfigurationConflict(bool conflict);
+}
+
+/// A fragment that is generated from
+/// [SemanticsConfiguration.childConfigurationsDelegate]
+///
+/// A render object can choose to add additional semantics config to be merged
+/// upward besides itself. These configs can be added through
+/// [SemanticsConfiguration.childConfigurationsDelegate] and will form
+/// `_IncompleteSemanticsFragment`s
+///
+/// See [RenderParagraph] for an example usage.
+class _IncompleteSemanticsFragment extends _SemanticsFragment {
+  _IncompleteSemanticsFragment(this.configToMergeUp, this.owner);
 
   @override
-  void compileChildren({ Rect? parentSemanticsClipRect, Rect? parentPaintClipRect, required double elevationAdjustment, required List<SemanticsNode> result }) {
-    if (!_isExplicit) {
-      owner._semantics = null;
-      for (final _InterestingSemanticsFragment fragment in _children) {
-        assert(_ancestorChain.first == fragment._ancestorChain.last);
-        fragment._ancestorChain.addAll(_ancestorChain.skip(1));
-        fragment.compileChildren(
-          parentSemanticsClipRect: parentSemanticsClipRect,
-          parentPaintClipRect: parentPaintClipRect,
-          // The fragment is not explicit, its elevation has been absorbed by
-          // the parent config (as thickness). We still need to make sure that
-          // its children are placed at the elevation dictated by this config.
-          elevationAdjustment: elevationAdjustment + _config.elevation,
-          result: result,
+  final SemanticsConfiguration configToMergeUp;
+
+  @override
+  final _RenderObjectSemantics owner;
+
+  @override
+  void markSiblingConfigurationConflict(bool conflict) {
+    assert(!conflict);
+  }
+}
+
+typedef _MergeUpAndSiblingMergeGroups =
+    (List<_SemanticsFragment> mergeUp, List<List<_SemanticsFragment>> siblingMergeGroups);
+
+/// A wrapper class for a [RenderObject] that provides semantics related
+/// properties and compilations.
+///
+/// ## A high level summary
+///
+/// The [PipelineOwner.flushSemantics] calls the [updateChildren] to
+/// build/update a tree of [_RenderObjectSemantics] by querying dirty
+/// RenderObjects about their [SemanticsConfiguration] and updating the
+/// _RenderObjectSemantics of the render objects according to these information.
+/// While doing that, [updateChildren] also decide what
+/// _RenderObjectSemantics will have their own SemanticsNode later on.
+/// After that, [PipelineOwner.flushSemantics] calls [ensureGeometry] to
+/// calculate the geometries for these _RenderObjectSemantics. Finally,
+/// [ensureSemanticsNode] compiles these _RenderObjectSemantics into the actual
+/// SemanticsNodes that form the semantics tree.
+///
+/// ## Steps Breakdown
+///
+/// The _RenderObjectSemantics tree is compiled in four phases. Phase 1 and 2
+/// are done in [updateChildren], Phase 3 is done in [ensureGeometry], and phase
+/// 4 is done in [ensureSemanticsNode].
+///
+/// ### Phase 1
+///
+/// Gather all the merge up _RenderObjectSemantics(s) by walking the rendering
+/// object tree.
+///
+/// They are stored in [mergeUp] and [siblingMergeGroups] and should mimic
+/// rendering object tree closely but only contain [_RenderObjectSemantics] that
+/// contributes to semantics tree. i.e. where [contributesToSemanticsTree] is
+/// true.
+///
+/// ### Phase 2
+///
+/// Merge all fragments from [mergeUp] and decide which [_RenderObjectSemantics]
+/// should form a node, i.e. [shouldFormSemanticsNode] is true. Stores the
+/// [_RenderObjectSemantics] that should form a node with elevation adjustments
+/// into [_childrenAndElevationAdjustments].
+///
+/// At this point, walking the [_childrenAndElevationAdjustments] forms a tree
+/// that exactly resemble the resulting semantics node tree.
+///
+/// ### Phase 3
+///
+/// Walks the [_childrenAndElevationAdjustments] and calculate their
+/// [_SemanticsGeometry] based on renderObject relationship.
+///
+/// ### Phase 4
+///
+/// Walks the [_childrenAndElevationAdjustments] and produce semantics node for
+/// each [_RenderObjectSemantics] plus the sibling nodes.
+///
+/// Phase 2, 3, 4 each depends on previous step to finished updating the the
+/// entire _RenderObjectSemantics tree. All three of them require separate tree
+/// walk.
+class _RenderObjectSemantics extends _SemanticsFragment with DiagnosticableTreeMixin {
+  _RenderObjectSemantics(this.renderObject)
+    : configProvider = _SemanticsConfigurationProvider(renderObject);
+
+  /// The owning rendering object for this wrapper.
+  final RenderObject renderObject;
+
+  bool _hasSiblingConflict = false;
+  bool? _blocksPreviousSibling;
+  double elevationAdjustment = 0.0;
+  // TODO(chunhtai): Figure out what to do when incomplete fragments are asked
+  // to form a semantics node.
+  //
+  // If this is true, the [contributesToSemanticsTree] will also return true.
+  // This is a workaround so that the incomplete fragments will not be forced to
+  // form nodes if the parent has explicitChildNode = true.
+  bool _containsIncompleteFragment = false;
+
+  bool built = false;
+
+  /// The cached node created directly by this Object.
+  ///
+  /// This cache is filled after the this object is compiled (usually by
+  /// calling [ensureSemanticsNode] on this object or ancestors) and forms a
+  /// semantics node.
+  ///
+  /// Caching the semantics node ensures the id is consistent in the life time
+  /// of this object.
+  ///
+  /// `_RenderSemanticsObject` only forms semantics node if
+  /// `shouldFormSemanticsNode` is true.
+  SemanticsNode? cachedSemanticsNode;
+
+  /// The semantics nodes produced by this render object.
+  ///
+  /// This is filled after [ensureSemanticsNode] is called on this object or
+  /// ancestors when [shouldFormSemanticsNode] is true. In most cases, this only
+  /// contains one semantics node equals to [cachedSemanticsNode].
+  ///
+  /// If there are [siblingMergeGroups], the nodes produced from the sibling
+  /// merge groups are also stored in this list.
+  final List<SemanticsNode> semanticsNodes = <SemanticsNode>[];
+
+  /// Fragments that will merge up to parent rendering object semantics.
+  final List<_SemanticsFragment> mergeUp = <_SemanticsFragment>[];
+
+  /// A map that record immediate child [_RenderObjectSemantics]s that will form
+  /// semantics nodes with their elevation adjustments.
+  final Map<_RenderObjectSemantics, double> _childrenAndElevationAdjustments =
+      <_RenderObjectSemantics, double>{};
+
+  /// Merge groups that will form additional sibling nodes.
+  final List<List<_SemanticsFragment>> siblingMergeGroups = <List<_SemanticsFragment>>[];
+  final Map<SemanticsNode, List<_SemanticsFragment>> _producedSiblingNodesAndOwners =
+      <SemanticsNode, List<_SemanticsFragment>>{};
+
+  _SemanticsParentData? parentData;
+  _SemanticsGeometry? geometry;
+
+  final _SemanticsConfigurationProvider configProvider;
+
+  @override
+  _RenderObjectSemantics get owner => this;
+
+  bool get parentDataDirty {
+    if (isRoot) {
+      return false;
+    }
+    return parentData == null;
+  }
+
+  /// If this forms a semantics node, all of the properties in config are
+  /// used in creating the node. There is nothing to be merged up.
+  @override
+  SemanticsConfiguration? get configToMergeUp =>
+      shouldFormSemanticsNode ? null : configProvider.effective;
+
+  bool get contributesToSemanticsTree {
+    return configProvider.effective.hasBeenAnnotated ||
+        _containsIncompleteFragment ||
+        configProvider.effective.isSemanticBoundary ||
+        isRoot;
+  }
+
+  bool get isRoot => renderObject.semanticsParent == null;
+
+  bool get shouldFormSemanticsNode {
+    if (configProvider.effective.isSemanticBoundary) {
+      return true;
+    }
+    if (isRoot) {
+      return true;
+    }
+    if (!contributesToSemanticsTree) {
+      return false;
+    }
+
+    assert(
+      parentData != null,
+      'If there is no explicit flag that enforce semantics node, parent data '
+      'must be updated before determining whether this object will form a node',
+    );
+    return parentData!.explicitChildNodes || _hasSiblingConflict;
+  }
+
+  static void debugCheckForParentData(RenderObject root) {
+    void debugCheckParentDataNotDirty(_RenderObjectSemantics semantics) {
+      assert(!semantics.parentDataDirty);
+      semantics._getNonBlockedChildren().forEach(debugCheckParentDataNotDirty);
+    }
+
+    debugCheckParentDataNotDirty(root._semantics);
+  }
+
+  /// Whether this render object semantics will block other render object
+  /// semantics behind it in render object order from parent.
+  ///
+  /// The [BlockSemantics] widget will cause this property to be true and hide
+  /// any sibling widget behind it from semantics.
+  bool get isBlockingPreviousSibling {
+    if (_blocksPreviousSibling != null) {
+      return _blocksPreviousSibling!;
+    }
+
+    _blocksPreviousSibling = configProvider.effective.isBlockingSemanticsOfPreviouslyPaintedNodes;
+
+    if (_blocksPreviousSibling!) {
+      return true;
+    }
+
+    if (configProvider.effective.isSemanticBoundary) {
+      return false;
+    }
+
+    renderObject.visitChildrenForSemantics((RenderObject child) {
+      final _RenderObjectSemantics childSemantics = child._semantics;
+      if (childSemantics.isBlockingPreviousSibling) {
+        _blocksPreviousSibling = true;
+      }
+    });
+    return _blocksPreviousSibling!;
+  }
+
+  bool shouldDrop(SemanticsNode node) => node.isInvisible;
+
+  void markNeedsBuild() {
+    built = false;
+    if (!parentDataDirty && !shouldFormSemanticsNode) {
+      return;
+    }
+    for (final List<_SemanticsFragment> group in siblingMergeGroups) {
+      for (final _RenderObjectSemantics semantics in group.whereType<_RenderObjectSemantics>()) {
+        if (semantics.parentDataDirty) {
+          continue;
+        }
+        if (!semantics.shouldFormSemanticsNode) {
+          // This render object semantics will need to be merged into a sibling
+          // node.
+          semantics.markNeedsBuild();
+        }
+      }
+    }
+  }
+
+  /// Updates the [parentData] for the [_RenderObjectSemantics]s in the
+  /// rendering subtree and forms a [_RenderObjectSemantics] tree where children
+  /// are stored in [_childrenAndElevationAdjustments].
+  ///
+  /// This method does the the phase 1 and 2 of the four phases documented on
+  /// [_RenderObjectSemantics].
+  ///
+  /// Gather all the merge up _RenderObjectSemantics(s) by walking the rendering
+  /// object tree.
+  ///
+  /// They are stored in [mergeUp] and [siblingMergeGroups] and should mimic
+  /// rendering object tree closely but only contain [_RenderObjectSemantics] that
+  /// contributes to semantics tree. i.e.
+  /// [contributesToSemanticsTree] is true.
+  ///
+  /// Merge all fragments from [mergeUp] and decide which [_RenderObjectSemantics]
+  /// should form a node. i.e. [shouldFormSemanticsNode] is true. Stores the
+  /// [_RenderObjectSemantics] that should form a node with elevation adjustments
+  /// into [_childrenAndElevationAdjustments].
+  void updateChildren() {
+    assert(parentData != null || isRoot, 'parent data can only be null for root rendering object');
+    configProvider.reset();
+    final Set<SemanticsTag>? tagsForChildren = _getTagsForChildren();
+    final bool explicitChildNodesForChildren =
+        isRoot ||
+        configProvider.effective.explicitChildNodes ||
+        // ParentData's explicitChildNode only
+        // propagate to children if this node doesn't
+        // contribute to semantics tree
+        (!contributesToSemanticsTree && (parentData?.explicitChildNodes ?? true));
+
+    final bool blocksUserAction =
+        (parentData?.blocksUserActions ?? false) || configProvider.effective.isBlockingUserActions;
+
+    siblingMergeGroups.clear();
+    mergeUp.clear();
+    final _SemanticsParentData childParentData = _SemanticsParentData(
+      mergeIntoParent:
+          (parentData?.mergeIntoParent ?? false) ||
+          configProvider.effective.isMergingSemanticsOfDescendants,
+      blocksUserActions: blocksUserAction,
+      explicitChildNodes: explicitChildNodesForChildren,
+      tagsForChildren: tagsForChildren,
+    );
+
+    final _MergeUpAndSiblingMergeGroups result = _collectChildMergeUpAndSiblingGroup(
+      childParentData,
+    );
+    mergeUp.addAll(result.$1);
+    siblingMergeGroups.addAll(result.$2);
+
+    // Construct tree for nodes that will form semantics nodes.
+    _childrenAndElevationAdjustments.clear();
+    if (contributesToSemanticsTree) {
+      _marksConflictsInMergeGroup(mergeUp, isMergeUp: true);
+      siblingMergeGroups.forEach(_marksConflictsInMergeGroup);
+
+      final Iterable<SemanticsConfiguration> mergeUpConfigs =
+          mergeUp
+              .map<SemanticsConfiguration?>(
+                (_SemanticsFragment fragment) => fragment.configToMergeUp,
+              )
+              .whereType<SemanticsConfiguration>();
+      configProvider.absorbAll(mergeUpConfigs);
+      // merge up fragments below this object will not be visible to parent
+      // because they are either absorbed or will form a semantics node.
+      mergeUp.clear();
+      mergeUp.add(this);
+      for (final _RenderObjectSemantics childSemantics
+          in result.$1.whereType<_RenderObjectSemantics>()) {
+        assert(childSemantics.contributesToSemanticsTree);
+        if (childSemantics.shouldFormSemanticsNode) {
+          _childrenAndElevationAdjustments[childSemantics] = 0.0;
+        } else {
+          final Map<_RenderObjectSemantics, double> passUpChildren =
+              childSemantics._childrenAndElevationAdjustments;
+          for (final _RenderObjectSemantics passUpChild in passUpChildren.keys) {
+            final double passUpElevationAdjustment =
+                passUpChildren[passUpChild]! + childSemantics.configProvider.original.elevation;
+            _childrenAndElevationAdjustments[passUpChild] = passUpElevationAdjustment;
+            passUpChild.elevationAdjustment = passUpElevationAdjustment;
+          }
+          siblingMergeGroups.addAll(childSemantics.siblingMergeGroups);
+        }
+      }
+
+      final Set<SemanticsTag>? tags = parentData?.tagsForChildren;
+      if (tags != null) {
+        assert(tags.isNotEmpty);
+        configProvider.updateConfig((SemanticsConfiguration config) {
+          tags.forEach(config.addTagForChildren);
+        });
+      }
+
+      if (blocksUserAction != configProvider.effective.isBlockingUserActions) {
+        configProvider.updateConfig((SemanticsConfiguration config) {
+          config.isBlockingUserActions = blocksUserAction;
+        });
+      }
+    }
+  }
+
+  List<_RenderObjectSemantics> _getNonBlockedChildren() {
+    final List<_RenderObjectSemantics> result = <_RenderObjectSemantics>[];
+    renderObject.visitChildrenForSemantics((RenderObject renderChild) {
+      if (renderChild._semantics.isBlockingPreviousSibling) {
+        result.clear();
+      }
+      result.add(renderChild._semantics);
+    });
+    return result;
+  }
+
+  Set<SemanticsTag>? _getTagsForChildren() {
+    if (contributesToSemanticsTree) {
+      return configProvider.original.tagsForChildren?.toSet();
+    }
+    Set<SemanticsTag>? result;
+    if (configProvider.original.tagsForChildren != null) {
+      result = configProvider.original.tagsForChildren!.toSet();
+    }
+    if (parentData?.tagsForChildren != null) {
+      if (result == null) {
+        result = parentData!.tagsForChildren;
+      } else {
+        result.addAll(parentData!.tagsForChildren!);
+      }
+    }
+    return result;
+  }
+
+  _MergeUpAndSiblingMergeGroups _collectChildMergeUpAndSiblingGroup(
+    _SemanticsParentData childParentData,
+  ) {
+    final List<_SemanticsFragment> mergeUp = <_SemanticsFragment>[];
+    final List<List<_SemanticsFragment>> siblingMergeGroups = <List<_SemanticsFragment>>[];
+
+    final List<SemanticsConfiguration> childConfigurations = <SemanticsConfiguration>[];
+    final ChildSemanticsConfigurationsDelegate? childConfigurationsDelegate =
+        configProvider.effective.childConfigurationsDelegate;
+    final bool hasChildConfigurationsDelegate = childConfigurationsDelegate != null;
+    final Map<SemanticsConfiguration, _SemanticsFragment> configToFragment =
+        <SemanticsConfiguration, _SemanticsFragment>{};
+
+    // It is possible the childConfigurationsDelegate may produce incomplete
+    // fragments. In this case, this render object semantics need to absorb all
+    // the mergeUp from children before present itself to the parent to avoid
+    // the parent forcing incomplete fragments to form a node. This is done by
+    // _containsIncompleteFragment which in turns flips the
+    // contributesToSemanticsTree.
+    //
+    // The problem is we won't know whether it will generate incomplete
+    // fragments until it runs, but we have to decide whether to propagate the
+    // parent's explicitChildNodes before we collect child fragments.
+    //
+    // Therefore, we have to make an assumption now to assume it will generate
+    // incomplete fragment and not propagate explicitChildNodes.
+    final bool needsToMakeIncompleteFragmentAssumption =
+        hasChildConfigurationsDelegate && childParentData.explicitChildNodes;
+
+    final _SemanticsParentData effectiveChildParentData;
+    if (needsToMakeIncompleteFragmentAssumption) {
+      effectiveChildParentData = _SemanticsParentData(
+        mergeIntoParent: childParentData.mergeIntoParent,
+        blocksUserActions: childParentData.blocksUserActions,
+        explicitChildNodes: false,
+        tagsForChildren: childParentData.tagsForChildren,
+      );
+    } else {
+      effectiveChildParentData = childParentData;
+    }
+    for (final _RenderObjectSemantics childSemantics in _getNonBlockedChildren()) {
+      assert(!childSemantics.renderObject._needsLayout);
+      childSemantics._didUpdateParentData(effectiveChildParentData);
+      for (final _SemanticsFragment fragment in childSemantics.mergeUp) {
+        if (hasChildConfigurationsDelegate && fragment.configToMergeUp != null) {
+          // This fragment need to go through delegate to determine whether it
+          // merge up or not.
+          childConfigurations.add(fragment.configToMergeUp!);
+          configToFragment[fragment.configToMergeUp!] = fragment;
+        } else {
+          mergeUp.add(fragment);
+        }
+      }
+
+      if (!childSemantics.contributesToSemanticsTree) {
+        // This child semantics needs to propagate sibling merge group to be
+        // compiled by parent that contributes to semantics tree.
+        siblingMergeGroups.addAll(childSemantics.siblingMergeGroups);
+      }
+    }
+    _containsIncompleteFragment = false;
+    assert(childConfigurationsDelegate != null || configToFragment.isEmpty);
+    if (hasChildConfigurationsDelegate) {
+      final ChildSemanticsConfigurationsResult result = childConfigurationsDelegate(
+        childConfigurations,
+      );
+      mergeUp.addAll(
+        result.mergeUp.map<_SemanticsFragment>((SemanticsConfiguration config) {
+          final _SemanticsFragment? fragment = configToFragment[config];
+          if (fragment != null) {
+            return fragment;
+          }
+          _containsIncompleteFragment = true;
+          return _IncompleteSemanticsFragment(config, this);
+        }),
+      );
+      for (final Iterable<SemanticsConfiguration> group in result.siblingMergeGroups) {
+        siblingMergeGroups.add(
+          group.map<_SemanticsFragment>((SemanticsConfiguration config) {
+            final _SemanticsFragment? fragment = configToFragment[config];
+            if (fragment != null) {
+              return fragment;
+            }
+            _containsIncompleteFragment = true;
+            return _IncompleteSemanticsFragment(config, this);
+          }).toList(),
         );
       }
+    }
+
+    if (!_containsIncompleteFragment && needsToMakeIncompleteFragmentAssumption) {
+      // Assumption was wrong, we have to re-update the child.
+      mergeUp.clear();
+      siblingMergeGroups.clear();
+
+      for (final _RenderObjectSemantics childSemantics in _getNonBlockedChildren()) {
+        assert(childParentData.explicitChildNodes);
+        childSemantics._didUpdateParentData(childParentData);
+        mergeUp.addAll(childSemantics.mergeUp);
+
+        if (!childSemantics.contributesToSemanticsTree) {
+          // This child semantics needs to propagate sibling merge group to be
+          // compiled by parent that contributes to semantics tree.
+          siblingMergeGroups.addAll(childSemantics.siblingMergeGroups);
+        }
+      }
+    }
+
+    return (mergeUp, siblingMergeGroups);
+  }
+
+  void _didUpdateParentData(_SemanticsParentData newParentData) {
+    if (parentData == newParentData) {
       return;
     }
+    // Parent data changes may result in node formation changes.
+    geometry = null;
+    markNeedsBuild();
+    parentData = newParentData;
+    updateChildren();
+  }
 
-    final _SemanticsGeometry? geometry = _needsGeometryUpdate
-        ? _SemanticsGeometry(parentSemanticsClipRect: parentSemanticsClipRect, parentPaintClipRect: parentPaintClipRect, ancestors: _ancestorChain)
-        : null;
+  /// Makes whether this fragment has a sibling fragment with conflicting
+  /// [SemanticsConfiguration].
+  @override
+  void markSiblingConfigurationConflict(bool conflict) {
+    _hasSiblingConflict = conflict;
+  }
 
-    if (!_mergeIntoParent && (geometry?.dropFromTree ?? false)) {
-      return; // Drop the node, it's not going to be visible.
+  /// Updates the [geometry] for this [_RenderObjectSemantics]s and its subtree
+  /// in [_childrenAndElevationAdjustments].
+  ///
+  /// This method does the the phase 3 of the four phases documented on
+  /// [_RenderObjectSemantics].
+  ///
+  /// This method is short-circuited if the subtree geometry won't
+  /// be affect after the update. (e.g. the size doesn't change, or new clip
+  /// rect doesn't clip the content).
+  void ensureGeometry() {
+    if (isRoot) {
+      if (geometry?.rect != renderObject.semanticBounds) {
+        markNeedsBuild();
+      }
+      geometry = _SemanticsGeometry.root(renderObject.semanticBounds);
     }
+    assert(geometry != null);
+    _updateChildGeometry();
+  }
 
-    owner._semantics ??= SemanticsNode(showOnScreen: owner.showOnScreen);
-    final SemanticsNode node = owner._semantics!
-      ..isMergedIntoParent = _mergeIntoParent
-      ..tags = _tagsForChildren;
-
-    node.elevationAdjustment = elevationAdjustment;
-    if (elevationAdjustment != 0.0) {
-      _ensureConfigIsWritable();
-      _config.elevation += elevationAdjustment;
+  void _updateChildGeometry() {
+    assert(geometry != null);
+    for (final _RenderObjectSemantics child in _childrenAndElevationAdjustments.keys) {
+      final _SemanticsGeometry childGeometry = _SemanticsGeometry.computeChildGeometry(
+        parentPaintClipRect: geometry!.paintClipRect,
+        parentSemanticsClipRect: geometry!.semanticsClipRect,
+        parentTransform: null,
+        parent: this,
+        child: child,
+      );
+      child._updateGeometry(newGeometry: childGeometry);
     }
+  }
 
-    if (geometry != null) {
-      assert(_needsGeometryUpdate);
-      node
-        ..rect = geometry.rect
-        ..transform = geometry.transform
-        ..parentSemanticsClipRect = geometry.semanticsClipRect
-        ..parentPaintClipRect = geometry.paintClipRect;
-      if (!_mergeIntoParent && geometry.markAsHidden) {
-        _ensureConfigIsWritable();
-        _config.isHidden = true;
+  void _updateGeometry({required _SemanticsGeometry newGeometry}) {
+    final _SemanticsGeometry? currentGeometry = geometry;
+    geometry = newGeometry;
+    markNeedsBuild();
+    if (currentGeometry != null) {
+      final bool isSemanticsHidden =
+          configProvider.original.isHidden ||
+          (!(parentData?.mergeIntoParent ?? false) && newGeometry.hidden);
+      final bool sizeChanged = currentGeometry.rect.size != newGeometry.rect.size;
+      final bool visibilityChanged = configProvider.effective.isHidden != isSemanticsHidden;
+      if (!sizeChanged && !visibilityChanged) {
+        return;
       }
     }
+    _updateChildGeometry();
+  }
 
+  /// Ensures the semantics nodes from this render object semantics subtree are
+  /// generated and up to date.
+  ///
+  /// This method does the the phase 4 of the four phases documented on
+  /// [_RenderObjectSemantics].
+  ///
+  /// This can only be called if the owning rendering object is a semantics
+  /// boundary. For non boundary rendering objects, they require semantics
+  /// information from both their parent and child rendering objects to update
+  /// its cache, so it can't update by themselves.
+  void ensureSemanticsNode() {
+    assert(configProvider.effective.isSemanticBoundary || isRoot);
+    if (!built) {
+      _buildSemantics(usedSemanticsIds: <int>{});
+    } else {
+      assert(built);
+      // parent data and parent geometry didn't change, there isn't anything to
+      // update for semantics nodes generated in this render object semantics.
+      //
+      // Therefore, we only need to update the subtree.
+      _buildSemanticsSubtree(usedSemanticsIds: <int>{}, elevationAdjustment: 0.0);
+    }
+  }
+
+  /// Builds the semantics node and its semantics node subtree.
+  ///
+  /// This method will in turn call [_buildSemanticsSubtree].
+  ///
+  /// This method will short-circuit itself if [cachedSemanticsNode] is
+  /// already up-to-date.
+  void _buildSemantics({required Set<int> usedSemanticsIds}) {
+    assert(shouldFormSemanticsNode);
+    if (cachedSemanticsNode != null) {
+      // Any node other than producedNode in _semanticsNodes are sibling nodes
+      // from children fragments. This fragment is responsible for updating
+      // tags as well as cleaning up.
+      //
+      // Clean up the properties now so that we don't have stale data in them
+      // after the _produceSemanticsNode.
+      for (final SemanticsNode node in semanticsNodes) {
+        if (node != cachedSemanticsNode) {
+          node.tags = null;
+        }
+      }
+    }
+    if (!built) {
+      semanticsNodes.clear();
+      _producedSiblingNodesAndOwners.clear();
+      _produceSemanticsNode(usedSemanticsIds: usedSemanticsIds);
+    }
+    assert(built);
+
+    // Any node other than producedNode in _semanticsNodes are sibling nodes
+    // from children fragments. They share the same tags as the producedNode.
+    final SemanticsNode producedNode = cachedSemanticsNode!;
+    for (final SemanticsNode node in semanticsNodes) {
+      if (node != producedNode) {
+        if (parentData?.tagsForChildren != null) {
+          node.tags ??= <SemanticsTag>{};
+          node.tags!.addAll(parentData!.tagsForChildren!);
+        } else if (node.tags?.isEmpty ?? false) {
+          node.tags = null;
+        }
+      }
+    }
+  }
+
+  /// Builds the semantics subtree under the [cachedSemanticsNode].
+  void _buildSemanticsSubtree({
+    required Set<int> usedSemanticsIds,
+    required double elevationAdjustment,
+    List<SemanticsNode>? semanticsNodes,
+  }) {
     final List<SemanticsNode> children = <SemanticsNode>[];
-    for (final _InterestingSemanticsFragment fragment in _children) {
-      fragment.compileChildren(
-        parentSemanticsClipRect: node.parentSemanticsClipRect,
-        parentPaintClipRect: node.parentPaintClipRect,
-        elevationAdjustment: 0.0,
-        result: children,
+    for (final _RenderObjectSemantics child in _childrenAndElevationAdjustments.keys) {
+      assert(child.shouldFormSemanticsNode);
+      // Cached semantics node may be part of sibling merging group prior
+      // to this update. In this case, the semantics node may continue to
+      // be reused in that sibling merging group.
+      if (child.cachedSemanticsNode != null &&
+          usedSemanticsIds.contains(child.cachedSemanticsNode!.id)) {
+        child.markNeedsBuild();
+        child.cachedSemanticsNode = null;
+      }
+
+      child._buildSemantics(usedSemanticsIds: usedSemanticsIds);
+      children.addAll(child.semanticsNodes);
+    }
+
+    final SemanticsNode node = cachedSemanticsNode!;
+    children.removeWhere(shouldDrop);
+    if (configProvider.effective.isSemanticBoundary) {
+      renderObject.assembleSemanticsNode(node, configProvider.effective, children);
+    } else {
+      node.updateWith(config: configProvider.effective, childrenInInversePaintOrder: children);
+    }
+  }
+
+  void _produceSemanticsNode({required Set<int> usedSemanticsIds}) {
+    assert(!built);
+    built = true;
+    final SemanticsNode node = cachedSemanticsNode ??= _createSemanticsNode();
+    semanticsNodes.add(node);
+    node
+      ..isMergedIntoParent = (parentData?.mergeIntoParent ?? false)
+      ..tags = parentData?.tagsForChildren;
+    _updateSemanticsNodeGeometry();
+
+    _mergeSiblingGroup(usedSemanticsIds);
+    _buildSemanticsSubtree(
+      semanticsNodes: semanticsNodes,
+      usedSemanticsIds: usedSemanticsIds,
+      elevationAdjustment: elevationAdjustment,
+    );
+  }
+
+  SemanticsNode _createSemanticsNode() {
+    if (isRoot) {
+      return SemanticsNode.root(
+        showOnScreen: owner.renderObject.showOnScreen,
+        owner: owner.renderObject.owner!.semanticsOwner!,
       );
     }
-    if (_config.isSemanticBoundary) {
-      owner.assembleSemanticsNode(node, _config, children);
-    } else {
-      node.updateWith(config: _config, childrenInInversePaintOrder: children);
+    return SemanticsNode(showOnScreen: owner.renderObject.showOnScreen);
+  }
+
+  void _mergeSiblingGroup(Set<int> usedSemanticsIds) {
+    for (final List<_SemanticsFragment> group in siblingMergeGroups) {
+      SemanticsConfiguration? configuration;
+      SemanticsNode? node;
+      for (final _SemanticsFragment fragment in group) {
+        if (fragment.configToMergeUp != null) {
+          fragment.mergesToSibling = true;
+          node ??= fragment.owner.cachedSemanticsNode;
+          configuration ??= SemanticsConfiguration();
+          configuration.absorb(fragment.configToMergeUp!);
+        }
+      }
+      // Can be null if all fragments in switchableFragments are marked as explicit.
+      if (configuration != null) {
+        if (node == null || usedSemanticsIds.contains(node.id)) {
+          node = SemanticsNode(showOnScreen: renderObject.showOnScreen);
+        }
+        usedSemanticsIds.add(node.id);
+        for (final _SemanticsFragment fragment in group) {
+          if (fragment.configToMergeUp != null) {
+            fragment.owner.built = true;
+            fragment.owner.cachedSemanticsNode = node;
+          }
+        }
+        node.updateWith(config: configuration);
+        _producedSiblingNodesAndOwners[node] = group;
+        semanticsNodes.add(node);
+
+        final Set<SemanticsTag> tags =
+            group
+                .map<Set<SemanticsTag>?>(
+                  (_SemanticsFragment fragment) => fragment.owner.parentData!.tagsForChildren,
+                )
+                .whereType<Set<SemanticsTag>>()
+                .expand<SemanticsTag>((Set<SemanticsTag> tags) => tags)
+                .toSet();
+        // This fragment is only allowed to add tags into the node instead of
+        // cleaning it since some of the tags may be added by the parent fragment
+        // who actually take these node as their siblings.
+        //
+        // It will be that fragment's responsibility to clean up the tags.
+        //
+        // This is the same for the transform as well.
+        //
+        // See _SwitchableFragment.compileSemanticsNodes
+        if (tags.isNotEmpty) {
+          if (node.tags == null) {
+            node.tags = tags;
+          } else {
+            node.tags!.addAll(tags);
+          }
+        }
+        node.isMergedIntoParent = parentData?.mergeIntoParent ?? false;
+      }
     }
-    result.add(node);
+    _updateSiblingNodesGeometries();
   }
 
-  @override
-  SemanticsConfiguration? get config {
-    return _isExplicit ? null : _config;
+  /// Updates the semantics geometry of the cached semantics node.
+  ///
+  /// Returns true if geometry changes that may result in children's geometries
+  /// change as well.
+  void _updateSemanticsNodeGeometry() {
+    final SemanticsNode node = cachedSemanticsNode!;
+    final _SemanticsGeometry nodeGeometry = geometry!;
+    node.elevationAdjustment = elevationAdjustment;
+    if (elevationAdjustment != 0.0) {
+      configProvider.updateConfig((SemanticsConfiguration config) {
+        config.elevation = configProvider.original.elevation + elevationAdjustment;
+      });
+    }
+    final bool isSemanticsHidden =
+        configProvider.original.isHidden ||
+        (!(parentData?.mergeIntoParent ?? false) && nodeGeometry.hidden);
+    node
+      ..rect = nodeGeometry.rect
+      ..transform = nodeGeometry.transform
+      ..parentSemanticsClipRect = nodeGeometry.semanticsClipRect
+      ..parentPaintClipRect = nodeGeometry.paintClipRect;
+    if (configProvider.effective.isHidden != isSemanticsHidden) {
+      configProvider.updateConfig((SemanticsConfiguration config) {
+        config.isHidden = isSemanticsHidden;
+      });
+    }
   }
 
-  @override
-  void addAll(Iterable<_InterestingSemanticsFragment> fragments) {
-    for (final _InterestingSemanticsFragment fragment in fragments) {
-      _children.add(fragment);
-      if (fragment.config == null) {
+  void _updateSiblingNodesGeometries() {
+    final _SemanticsGeometry mainGeometry = geometry!;
+    for (final MapEntry<SemanticsNode, List<_SemanticsFragment>> entry
+        in _producedSiblingNodesAndOwners.entries) {
+      Rect? rect;
+      Rect? semanticsClipRect;
+      Rect? paintClipRect;
+      for (final _SemanticsFragment fragment in entry.value) {
+        if (fragment.owner.shouldFormSemanticsNode) {
+          continue;
+        }
+        final _SemanticsGeometry parentGeometry = _SemanticsGeometry.computeChildGeometry(
+          parentTransform: mainGeometry.transform,
+          parentSemanticsClipRect: mainGeometry.semanticsClipRect,
+          parentPaintClipRect: mainGeometry.paintClipRect,
+          parent: this,
+          child: fragment.owner,
+        );
+        final Rect rectInFragmentOwnerCoordinates =
+            parentGeometry.semanticsClipRect?.intersect(
+              fragment.owner.renderObject.semanticBounds,
+            ) ??
+            fragment.owner.renderObject.semanticBounds;
+        final Rect rectInParentCoordinates = MatrixUtils.transformRect(
+          parentGeometry.transform,
+          rectInFragmentOwnerCoordinates,
+        );
+        rect = rect?.expandToInclude(rectInParentCoordinates) ?? rectInParentCoordinates;
+        if (parentGeometry.semanticsClipRect != null) {
+          final Rect rect = MatrixUtils.transformRect(
+            parentGeometry.transform,
+            parentGeometry.semanticsClipRect!,
+          );
+          semanticsClipRect = semanticsClipRect?.intersect(rect) ?? rect;
+        }
+        if (parentGeometry.paintClipRect != null) {
+          final Rect rect = MatrixUtils.transformRect(
+            parentGeometry.transform,
+            parentGeometry.paintClipRect!,
+          );
+          paintClipRect = paintClipRect?.intersect(rect) ?? rect;
+        }
+      }
+      final SemanticsNode node = entry.key;
+      node
+        ..rect = rect!
+        ..transform =
+            null // transform has be taking into account when
+        // calculating the rect.
+        ..parentSemanticsClipRect = semanticsClipRect
+        ..parentPaintClipRect = paintClipRect;
+    }
+  }
+
+  /// The [renderObject]'s semantics information has changed.
+  void markNeedsUpdate() {
+    final SemanticsNode? producedSemanticsNode = cachedSemanticsNode;
+    // Dirty the semantics tree starting at `this` until we have reached a
+    // RenderObject that is a semantics boundary. All semantics past this
+    // RenderObject are still up-to date. Therefore, we will later only rebuild
+    // the semantics subtree starting at the identified semantics boundary.
+    final bool wasSemanticsBoundary =
+        producedSemanticsNode != null && configProvider.wasSemanticsBoundary;
+
+    configProvider.clear();
+    _containsIncompleteFragment = false;
+
+    bool mayProduceSiblingNodes = configProvider.effective.childConfigurationsDelegate != null;
+    bool isEffectiveSemanticsBoundary =
+        configProvider.effective.isSemanticBoundary && wasSemanticsBoundary;
+    RenderObject node = renderObject;
+
+    // The sibling nodes will be attached to the parent of immediate semantics
+    // node, thus marking this semantics boundary dirty is not enough, it needs
+    // to find the first parent semantics boundary that does not have any
+    // possible sibling node.
+    while (node.semanticsParent != null &&
+        (mayProduceSiblingNodes || !isEffectiveSemanticsBoundary)) {
+      if (node != renderObject && node._semantics.parentDataDirty && !mayProduceSiblingNodes) {
+        break;
+      }
+      node._semantics.geometry = null;
+      node._semantics.parentData = null;
+      node._semantics._blocksPreviousSibling = null;
+      node._semantics.elevationAdjustment = 0.0;
+      // Since this node is a semantics boundary, the produced sibling nodes will
+      // be attached to the parent semantics boundary. Thus, these sibling nodes
+      // will not be carried to the next loop.
+      if (isEffectiveSemanticsBoundary) {
+        mayProduceSiblingNodes = false;
+      }
+      mayProduceSiblingNodes |=
+          node._semantics.configProvider.effective.childConfigurationsDelegate != null;
+
+      node = node.semanticsParent!;
+      // If node._semantics.built is false, this branch is currently blocked.
+      // In that case, it should continue dirty upward until it reach a
+      // unblocked semantics boundary because blocked branch will not rebuild
+      // semantics during PipelineOwner.flushSemantics.
+      //
+      // If we stop here and not dirty the rendering parent and a flush semantics
+      // is called, it will end up with a blocked branch where some sub-branch
+      // is dirty. There won't be a way to rebuild these dirty sub-branch
+      // without rebuilding the entire blocked branch (which is costly) when the
+      // branch is later unblocked.
+      isEffectiveSemanticsBoundary =
+          node._semantics.configProvider.effective.isSemanticBoundary && node._semantics.built;
+    }
+    if (node != renderObject && producedSemanticsNode != null && node._semantics.parentDataDirty) {
+      // If `this` node has already been added to [owner._nodesNeedingSemantics]
+      // remove it as it is no longer guaranteed that its semantics
+      // node will continue to be in the tree. If it still is in the tree, the
+      // ancestor `node` added to [owner._nodesNeedingSemantics] at the end of
+      // this block will ensure that the semantics of `this` node actually gets
+      // updated.
+      // (See semantics_10_test.dart for an example why this is required).
+      renderObject.owner!._nodesNeedingSemantics.remove(renderObject);
+    }
+    if (!node._semantics.parentDataDirty) {
+      if (renderObject.owner != null) {
+        assert(
+          node._semantics.configProvider.effective.isSemanticBoundary ||
+              node.semanticsParent == null,
+        );
+        if (renderObject.owner!._nodesNeedingSemantics.add(node)) {
+          renderObject.owner!.requestVisualUpdate();
+        }
+      }
+    }
+  }
+
+  void _marksConflictsInMergeGroup(List<_SemanticsFragment> mergeGroup, {bool isMergeUp = false}) {
+    final Set<_SemanticsFragment> hasSiblingConflict = <_SemanticsFragment>{};
+    for (int i = 0; i < mergeGroup.length; i += 1) {
+      final _SemanticsFragment fragment = mergeGroup[i];
+      // Remove old value
+      fragment.markSiblingConfigurationConflict(false);
+      if (fragment.configToMergeUp == null) {
         continue;
       }
-      _ensureConfigIsWritable();
-      _config.absorb(fragment.config!);
+      if (isMergeUp && !configProvider.original.isCompatibleWith(fragment.configToMergeUp)) {
+        hasSiblingConflict.add(fragment);
+      }
+      final int siblingLength = i;
+      for (int j = 0; j < siblingLength; j += 1) {
+        final _SemanticsFragment siblingFragment = mergeGroup[j];
+        if (!fragment.configToMergeUp!.isCompatibleWith(siblingFragment.configToMergeUp)) {
+          hasSiblingConflict.add(fragment);
+          hasSiblingConflict.add(siblingFragment);
+        }
+      }
+    }
+    for (final _SemanticsFragment fragment in hasSiblingConflict) {
+      fragment.markSiblingConfigurationConflict(true);
     }
   }
 
-  void _ensureConfigIsWritable() {
-    if (!_isConfigWritable) {
-      _config = _config.copy();
-      _isConfigWritable = true;
-    }
+  /// Removes any cache stored in this object as if it is newly created.
+  void clear() {
+    built = false;
+    elevationAdjustment = 0.0;
+    cachedSemanticsNode = null;
+    parentData = null;
+    geometry = null;
+    _blocksPreviousSibling = null;
+    _containsIncompleteFragment = false;
+    mergeUp.clear();
+    siblingMergeGroups.clear();
+    _childrenAndElevationAdjustments.clear();
+    semanticsNodes.clear();
+    configProvider.clear();
   }
-
-  bool _isExplicit = false;
 
   @override
-  void markAsExplicit() {
-    _isExplicit = true;
+  List<DiagnosticsNode> debugDescribeChildren() {
+    return _getNonBlockedChildren()
+        .map<DiagnosticsNode>((_RenderObjectSemantics child) => child.toDiagnosticsNode())
+        .toList();
   }
 
-  bool get _needsGeometryUpdate => _ancestorChain.length > 1;
+  @protected
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties.add(StringProperty('owner', describeIdentity(renderObject)));
+    properties.add(
+      FlagProperty('noParentData', value: parentData == null, ifTrue: 'NO PARENT DATA'),
+    );
+    properties.add(
+      FlagProperty(
+        'semanticsBlock',
+        value: configProvider.effective.isBlockingSemanticsOfPreviouslyPaintedNodes,
+        ifTrue: 'BLOCK PREVIOUS',
+      ),
+    );
+    if (contributesToSemanticsTree) {
+      final String semanticsNodeStatus;
+      if (built) {
+        semanticsNodeStatus = 'formed ${cachedSemanticsNode?.id}';
+      } else if (!built && shouldFormSemanticsNode) {
+        semanticsNodeStatus = 'needs build';
+      } else {
+        semanticsNodeStatus = 'no semantics node';
+      }
+      properties.add(StringProperty('formedSemanticsNode', semanticsNodeStatus, quoted: false));
+    }
+    properties.add(
+      FlagProperty(
+        'isSemanticBoundary',
+        value: configProvider.effective.isSemanticBoundary,
+        ifTrue: 'semantic boundary',
+      ),
+    );
+    properties.add(
+      FlagProperty('blocksSemantics', value: isBlockingPreviousSibling, ifTrue: 'BLOCKS SEMANTICS'),
+    );
+    if (contributesToSemanticsTree && siblingMergeGroups.isNotEmpty) {
+      properties.add(StringProperty('Sibling group', siblingMergeGroups.toString(), quoted: false));
+    }
+  }
 }
+
+/// Dumps the render object semantics tree.
+void debugDumpRenderObjectSemanticsTree() {
+  debugPrint(_debugCollectRenderObjectSemanticsTrees());
+}
+
+String _debugCollectRenderObjectSemanticsTrees() {
+  if (RendererBinding.instance.renderViews.isEmpty) {
+    return 'No render tree root was added to the binding.';
+  }
+  return <String>[
+    for (final RenderObject renderView in RendererBinding.instance.renderViews)
+      renderView._semantics.toStringDeep(),
+  ].join('\n\n');
+}
+
+typedef _SemanticsGeometryClips = (Rect? paintClipRect, Rect? semanticsClipRect);
 
 /// Helper class that keeps track of the geometry of a [SemanticsNode].
 ///
 /// It is used to annotate a [SemanticsNode] with the current information for
 /// [SemanticsNode.rect] and [SemanticsNode.transform].
-class _SemanticsGeometry {
+@immutable
+final class _SemanticsGeometry {
+  /// The `paintClipRect` may be null if no clip is to be applied.
+  const _SemanticsGeometry({
+    required this.paintClipRect,
+    required this.semanticsClipRect,
+    required this.transform,
+    required this.rect,
+    required this.hidden,
+  });
 
-  /// The `parentClippingRect` may be null if no clip is to be applied.
-  ///
-  /// The `ancestors` list has to include all [RenderObject] in order that are
-  /// located between the [SemanticsNode] whose geometry is represented here
-  /// (first [RenderObject] in the list) and its closest ancestor [RenderObject]
-  /// that also owns its own [SemanticsNode] (last [RenderObject] in the list).
-  _SemanticsGeometry({
-    required Rect? parentSemanticsClipRect,
-    required Rect? parentPaintClipRect,
-    required List<RenderObject> ancestors,
-  }) {
-    _computeValues(parentSemanticsClipRect, parentPaintClipRect, ancestors);
+  factory _SemanticsGeometry.root(Rect rect) {
+    return _SemanticsGeometry(
+      paintClipRect: null,
+      semanticsClipRect: null,
+      transform: Matrix4.identity(),
+      hidden: false,
+      rect: rect,
+    );
   }
 
-  Rect? _paintClipRect;
-  Rect? _semanticsClipRect;
-  late Matrix4 _transform;
-  late Rect _rect;
-
   /// Value for [SemanticsNode.transform].
-  Matrix4 get transform => _transform;
+  final Matrix4 transform;
 
   /// Value for [SemanticsNode.parentSemanticsClipRect].
-  Rect? get semanticsClipRect => _semanticsClipRect;
+  final Rect? semanticsClipRect;
 
   /// Value for [SemanticsNode.parentPaintClipRect].
-  Rect? get paintClipRect => _paintClipRect;
+  final Rect? paintClipRect;
 
   /// Value for [SemanticsNode.rect].
-  Rect get rect => _rect;
+  final Rect rect;
 
-  /// Computes values, ensuring `rect` is properly bounded by ancestor clipping rects.
-  ///
-  /// See also:
-  ///
-  /// * [RenderObject.describeSemanticsClip], typically used to determine `parentSemanticsClipRect`.
-  /// * [RenderObject.describeApproximatePaintClip], typically used to determine `parentPaintClipRect`.
-  void _computeValues(Rect? parentSemanticsClipRect, Rect? parentPaintClipRect, List<RenderObject> ancestors) {
-    assert(ancestors.length > 1);
+  /// Whether the semantics node is completely clipped from ui, i.e. by
+  /// paintClipRect, but is still present in semantics tree.
+  final bool hidden;
 
-    _transform = Matrix4.identity();
-    _semanticsClipRect = parentSemanticsClipRect;
-    _paintClipRect = parentPaintClipRect;
-    for (int index = ancestors.length-1; index > 0; index -= 1) {
-      final RenderObject parent = ancestors[index];
-      final RenderObject child = ancestors[index-1];
-      final Rect? parentSemanticsClipRect = parent.describeSemanticsClip(child);
-      if (parentSemanticsClipRect != null) {
-        _semanticsClipRect = parentSemanticsClipRect;
-        _paintClipRect = _intersectRects(_paintClipRect, parent.describeApproximatePaintClip(child));
+  static _SemanticsGeometry computeChildGeometry({
+    required Matrix4? parentTransform,
+    required Rect? parentPaintClipRect,
+    required Rect? parentSemanticsClipRect,
+    required _RenderObjectSemantics parent,
+    required _RenderObjectSemantics child,
+  }) {
+    final Matrix4 transform = parentTransform?.clone() ?? Matrix4.identity();
+    Matrix4? parentToCommonAncestorTransform;
+    RenderObject childRenderObject = child.renderObject;
+    RenderObject parentRenderObject = parent.renderObject;
+
+    final List<RenderObject> childToCommonAncestor = <RenderObject>[childRenderObject];
+
+    // Find the common ancestor.
+    while (!identical(childRenderObject, parentRenderObject)) {
+      final int fromDepth = childRenderObject.depth;
+      final int toDepth = parentRenderObject.depth;
+
+      if (fromDepth >= toDepth) {
+        assert(
+          childRenderObject.parent != null,
+          '$parent and $child are not in the same render tree.',
+        );
+        childRenderObject = childRenderObject.parent!;
+        childToCommonAncestor.add(childRenderObject);
+      }
+      if (fromDepth <= toDepth) {
+        assert(
+          parentRenderObject.parent != null,
+          '$parent and $child are not in the same render tree.',
+        );
+        final RenderObject toParent = parentRenderObject.parent!;
+        toParent.applyPaintTransform(
+          parentRenderObject,
+          parentToCommonAncestorTransform ??= Matrix4.identity(),
+        );
+        parentRenderObject = toParent;
+      }
+    }
+
+    // Calculate transform.
+    assert(childToCommonAncestor.length >= 2);
+    for (int i = childToCommonAncestor.length - 1; i > 0; i -= 1) {
+      childToCommonAncestor[i].applyPaintTransform(childToCommonAncestor[i - 1], transform);
+    }
+
+    if (parentToCommonAncestorTransform != null) {
+      if (parentToCommonAncestorTransform.invert() != 0) {
+        transform.multiply(parentToCommonAncestorTransform);
       } else {
-        _semanticsClipRect = _intersectRects(_semanticsClipRect, parent.describeApproximatePaintClip(child));
+        transform.setZero();
       }
-      _temporaryTransformHolder.setIdentity(); // clears data from previous call(s)
-      _applyIntermediatePaintTransforms(parent, child, _transform, _temporaryTransformHolder);
-      _semanticsClipRect = _transformRect(_semanticsClipRect, _temporaryTransformHolder);
-      _paintClipRect = _transformRect(_paintClipRect, _temporaryTransformHolder);
     }
 
-    final RenderObject owner = ancestors.first;
-    _rect = _semanticsClipRect == null ? owner.semanticBounds : _semanticsClipRect!.intersect(owner.semanticBounds);
-    if (_paintClipRect != null) {
-      final Rect paintRect = _paintClipRect!.intersect(_rect);
-      _markAsHidden = paintRect.isEmpty && !_rect.isEmpty;
-      if (!_markAsHidden) {
-        _rect = paintRect;
+    // Calculate clips.
+    Rect? paintClipRect;
+    Rect? semanticsClipRect;
+    if (childToCommonAncestor.last == parent.renderObject) {
+      // This is most common case, i.e. parent is the common ancestor.
+      paintClipRect = parentPaintClipRect;
+      semanticsClipRect = parentSemanticsClipRect;
+      assert(parentToCommonAncestorTransform == null);
+      for (int i = childToCommonAncestor.length - 1; i > 0; i -= 1) {
+        (paintClipRect, semanticsClipRect) = _computeClipRect(
+          childToCommonAncestor[i],
+          childToCommonAncestor[i - 1],
+          semanticsClipRect,
+          paintClipRect,
+        );
+      }
+    } else {
+      // Otherwise we have to find the closest ancestor RenderObject that
+      // has up-to-date semantics geometry and compute the clip rects from there.
+      //
+      // Currently it can only happen when the subtree contains an OverlayPortal.
+      final List<RenderObject> clipPath = <RenderObject>[child.renderObject];
+
+      RenderObject? ancestor = child.renderObject.parent;
+      while (ancestor != null && ancestor._semantics.cachedSemanticsNode == null) {
+        clipPath.add(ancestor);
+        ancestor = ancestor.parent;
+      }
+      final SemanticsNode? ancestorNode = ancestor?._semantics.cachedSemanticsNode;
+      paintClipRect = ancestorNode?.parentPaintClipRect;
+      semanticsClipRect = ancestorNode?.parentSemanticsClipRect;
+      if (ancestor != null) {
+        RenderObject parent = ancestor;
+        for (int i = clipPath.length - 1; i >= 0; i -= 1) {
+          (paintClipRect, semanticsClipRect) = _computeClipRect(
+            parent,
+            clipPath[i],
+            semanticsClipRect,
+            paintClipRect,
+          );
+          parent = clipPath[i];
+        }
       }
     }
+
+    Rect rect =
+        semanticsClipRect?.intersect(child.renderObject.semanticBounds) ??
+        child.renderObject.semanticBounds;
+    bool isRectHidden = false;
+    if (paintClipRect != null) {
+      final Rect paintRect = paintClipRect.intersect(rect);
+      isRectHidden = paintRect.isEmpty && !rect.isEmpty;
+      if (!isRectHidden) {
+        rect = paintRect;
+      }
+    }
+
+    return _SemanticsGeometry(
+      transform: transform,
+      paintClipRect: paintClipRect,
+      semanticsClipRect: semanticsClipRect,
+      rect: rect,
+      hidden: isRectHidden,
+    );
+  }
+
+  /// From parent to child coordinate system.
+  static Rect? _transformRect(Rect? rect, Matrix4 transform) {
+    if (rect == null) {
+      return null;
+    }
+    if (rect.isEmpty || transform.isZero()) {
+      return Rect.zero;
+    }
+    return MatrixUtils.inverseTransformRect(transform, rect);
   }
 
   // A matrix used to store transient transform data.
@@ -4379,75 +5895,44 @@ class _SemanticsGeometry {
   // stored in it will be overwritten unpredictably by subsequent reuses.
   static final Matrix4 _temporaryTransformHolder = Matrix4.zero();
 
-  /// From parent to child coordinate system.
-  static Rect? _transformRect(Rect? rect, Matrix4 transform) {
-    assert(transform != null);
-    if (rect == null) {
-      return null;
-    }
-    if (rect.isEmpty || transform.isZero()) {
-      return Rect.zero;
-    }
-    return MatrixUtils.inverseTransformRect(transform, rect);
-  }
-
-  // Calls applyPaintTransform on all of the render objects between [child] and
-  // [ancestor]. This method handles cases where the immediate semantic parent
-  // is not the immediate render object parent of the child.
+  // Computes the semantics and painting clip rects for the given child and
+  // assigns the rects to _semanticsClipRect and _paintClipRect respectively.
   //
-  // It will mutate both transform and clipRectTransform.
-  static void _applyIntermediatePaintTransforms(
-    RenderObject ancestor,
+  // The caller must guarantee that child.parent == parent. The resulting rects
+  // are in `child`'s coordinate system.
+  static _SemanticsGeometryClips _computeClipRect(
+    RenderObject parent,
     RenderObject child,
-    Matrix4 transform,
-    Matrix4 clipRectTransform,
+    Rect? parentSemanticsClipRect,
+    Rect? parentPaintClipRect,
   ) {
-    assert(ancestor != null);
-    assert(child != null);
-    assert(transform != null);
-    assert(clipRectTransform != null);
-    assert(clipRectTransform.isIdentity());
-    RenderObject intermediateParent = child.parent! as RenderObject;
-    assert(intermediateParent != null);
-    while (intermediateParent != ancestor) {
-      intermediateParent.applyPaintTransform(child, transform);
-      intermediateParent = intermediateParent.parent! as RenderObject;
-      child = child.parent! as RenderObject;
-      assert(intermediateParent != null);
+    assert(identical(child.parent, parent));
+    final Rect? additionalPaintClip = parent.describeApproximatePaintClip(child);
+    if (parentPaintClipRect == null && additionalPaintClip == null) {
+      return (null, null);
     }
-    ancestor.applyPaintTransform(child, transform);
-    ancestor.applyPaintTransform(child, clipRectTransform);
+    // Computes the paint transform from child to parent. The _transformRect
+    // method will compute the inverse.
+    _temporaryTransformHolder.setIdentity(); // clears data from previous call(s)
+    parent.applyPaintTransform(child, _temporaryTransformHolder);
+
+    final Rect paintClipRect =
+        _transformRect(
+          _intersectRects(additionalPaintClip, parentPaintClipRect),
+          _temporaryTransformHolder,
+        )!;
+    final Rect? semanticsClip =
+        parent.describeSemanticsClip(child) ??
+        _intersectRects(parentSemanticsClipRect, additionalPaintClip);
+    return (paintClipRect, _transformRect(semanticsClip, _temporaryTransformHolder));
   }
 
   static Rect? _intersectRects(Rect? a, Rect? b) {
-    if (a == null) {
-      return b;
-    }
     if (b == null) {
       return a;
     }
-    return a.intersect(b);
+    return a?.intersect(b) ?? b;
   }
-
-  /// Whether the [SemanticsNode] annotated with the geometric information tracked
-  /// by this object can be dropped from the semantics tree without losing
-  /// semantics information.
-  bool get dropFromTree {
-    return _rect.isEmpty;
-  }
-
-  /// Whether the [SemanticsNode] annotated with the geometric information
-  /// tracked by this object should be marked as hidden because it is not
-  /// visible on screen.
-  ///
-  /// Hidden elements should still be included in the tree to work around
-  /// platform limitations (e.g. accessibility scrolling on iOS).
-  ///
-  /// See also:
-  ///
-  ///  * [SemanticsFlag.isHidden] for the purpose of marking a node as hidden.
-  bool get markAsHidden => _markAsHidden;
-  bool _markAsHidden = false;
 }
 
 /// A class that creates [DiagnosticsNode] by wrapping [RenderObject.debugCreator].
@@ -4459,10 +5944,5 @@ class DiagnosticsDebugCreator extends DiagnosticsProperty<Object> {
   /// Create a [DiagnosticsProperty] with its [value] initialized to input
   /// [RenderObject.debugCreator].
   DiagnosticsDebugCreator(Object value)
-    : assert(value != null),
-      super(
-        'debugCreator',
-        value,
-        level: DiagnosticLevel.hidden,
-      );
+    : super('debugCreator', value, level: DiagnosticLevel.hidden);
 }

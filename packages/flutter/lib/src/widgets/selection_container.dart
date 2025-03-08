@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+/// @docImport 'package:flutter/material.dart';
+///
+/// @docImport 'selectable_region.dart';
+library;
+
 import 'package:flutter/rendering.dart';
 
 import 'framework.dart';
@@ -41,15 +46,12 @@ class SelectionContainer extends StatefulWidget {
   ///
   /// If [registrar] is not provided, this selection container gets the
   /// [SelectionRegistrar] from the context instead.
-  ///
-  /// The [delegate] and [child] must not be null.
   const SelectionContainer({
     super.key,
     this.registrar,
     required SelectionContainerDelegate this.delegate,
     required this.child,
-  }) : assert(delegate != null),
-       assert(child != null);
+  });
 
   /// Creates a selection container that disables selection for the
   /// subtree.
@@ -60,13 +62,9 @@ class SelectionContainer extends StatefulWidget {
   ///
   /// ** See code in examples/api/lib/material/selection_container/selection_container_disabled.0.dart **
   /// {@end-tool}
-  ///
-  /// The [child] must not be null.
-  const SelectionContainer.disabled({
-    super.key,
-    required this.child,
-  }) : registrar = null,
-       delegate = null;
+  const SelectionContainer.disabled({super.key, required this.child})
+    : registrar = null,
+      delegate = null;
 
   /// The [SelectionRegistrar] this container is registered to.
   ///
@@ -92,7 +90,8 @@ class SelectionContainer extends StatefulWidget {
   /// the [BuildContext] or the immediate [SelectionContainer] is not
   /// enabled.
   static SelectionRegistrar? maybeOf(BuildContext context) {
-    final SelectionRegistrarScope? scope = context.dependOnInheritedWidgetOfExactType<SelectionRegistrarScope>();
+    final SelectionRegistrarScope? scope =
+        context.dependOnInheritedWidgetOfExactType<SelectionRegistrarScope>();
     return scope?.registrar;
   }
 
@@ -102,7 +101,8 @@ class SelectionContainer extends StatefulWidget {
   State<SelectionContainer> createState() => _SelectionContainerState();
 }
 
-class _SelectionContainerState extends State<SelectionContainer> with Selectable, SelectionRegistrant {
+class _SelectionContainerState extends State<SelectionContainer>
+    with Selectable, SelectionRegistrant {
   final Set<VoidCallback> _listeners = <VoidCallback>{};
 
   static const SelectionGeometry _disabledGeometry = SelectionGeometry(
@@ -134,7 +134,8 @@ class _SelectionContainerState extends State<SelectionContainer> with Selectable
         _listeners.forEach(widget.delegate!.addListener);
       }
       if (oldWidget.delegate?.value != widget.delegate?.value) {
-        for (final VoidCallback listener in _listeners) {
+        // Avoid concurrent modification.
+        for (final VoidCallback listener in _listeners.toList(growable: false)) {
           listener();
         }
       }
@@ -182,6 +183,12 @@ class _SelectionContainerState extends State<SelectionContainer> with Selectable
   }
 
   @override
+  SelectedContentRange? getSelection() {
+    assert(!widget._disabled);
+    return widget.delegate!.getSelection();
+  }
+
+  @override
   SelectionResult dispatchSelectionEvent(SelectionEvent event) {
     assert(!widget._disabled);
     return widget.delegate!.dispatchSelectionEvent(event);
@@ -202,7 +209,13 @@ class _SelectionContainerState extends State<SelectionContainer> with Selectable
   }
 
   @override
+  int get contentLength => widget.delegate!.contentLength;
+
+  @override
   Size get size => (context.findRenderObject()! as RenderBox).size;
+
+  @override
+  List<Rect> get boundingBoxes => <Rect>[(context.findRenderObject()! as RenderBox).paintBounds];
 
   @override
   void dispose() {
@@ -218,10 +231,7 @@ class _SelectionContainerState extends State<SelectionContainer> with Selectable
     if (widget._disabled) {
       return SelectionRegistrarScope._disabled(child: widget.child);
     }
-    return SelectionRegistrarScope(
-      registrar: widget.delegate!,
-      child: widget.child,
-    );
+    return SelectionRegistrarScope(registrar: widget.delegate!, child: widget.child);
   }
 }
 
@@ -240,13 +250,11 @@ class SelectionRegistrarScope extends InheritedWidget {
     super.key,
     required SelectionRegistrar this.registrar,
     required super.child,
-  }) : assert(registrar != null);
+  });
 
   /// Creates a selection registrar scope that disables selection for the
   /// subtree.
-  const SelectionRegistrarScope._disabled({
-    required super.child,
-  }) : registrar = null;
+  const SelectionRegistrarScope._disabled({required super.child}) : registrar = null;
 
   /// The [SelectionRegistrar] hosted by this widget.
   final SelectionRegistrar? registrar;
@@ -299,14 +307,25 @@ abstract class SelectionContainerDelegate implements SelectionHandler, Selection
     return box.getTransformTo(ancestor);
   }
 
+  /// Whether the [SelectionContainer] has undergone layout and has a size.
+  ///
+  /// See also:
+  ///
+  ///  * [RenderBox.hasSize], which is used internally by this method.
+  bool get hasSize {
+    assert(
+      _selectionContainerContext?.findRenderObject() != null,
+      'The _selectionContainerContext must have a renderObject, such as after the first build has completed.',
+    );
+    final RenderBox box = _selectionContainerContext!.findRenderObject()! as RenderBox;
+    return box.hasSize;
+  }
+
   /// Gets the size of the [SelectionContainer] of this delegate.
   ///
   /// Can only be called after [SelectionContainer] is laid out.
   Size get containerSize {
-    assert(
-      _selectionContainerContext?.findRenderObject() != null,
-      'containerSize cannot be called before SelectionContainer is laid out.',
-    );
+    assert(hasSize, 'containerSize cannot be called before SelectionContainer is laid out.');
     final RenderBox box = _selectionContainerContext!.findRenderObject()! as RenderBox;
     return box.size;
   }

@@ -18,8 +18,16 @@
   "cutButtonLabel": "Αποκοπή",
   "copyButtonLabel": "Αντιγραφή",
   "pasteButtonLabel": "Επικόλληση",
+  "clearButtonLabel": "Διαγραφή",
   "selectAllButtonLabel": "Επιλογή όλων",
   "tabSemanticsLabel": "Καρτέλα $tabIndex από $tabCount",
   "modalBarrierDismissLabel": "Παράβλεψη",
-  "searchTextFieldPlaceholderLabel": "Αναζήτηση"
+  "searchTextFieldPlaceholderLabel": "Αναζήτηση",
+  "noSpellCheckReplacementsLabel": "Δεν βρέθηκαν αντικαταστάσεις",
+  "menuDismissLabel": "Παράβλεψη μενού",
+  "lookUpButtonLabel": "Look Up",
+  "searchWebButtonLabel": "Αναζήτηση στον ιστό",
+  "shareButtonLabel": "Κοινοποίηση…",
+  "cancelButtonLabel": "Cancel",
+  "backButtonLabel": "Back"
 }

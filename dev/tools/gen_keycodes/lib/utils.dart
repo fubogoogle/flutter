@@ -12,7 +12,8 @@ import 'constants.dart';
 
 /// The location of the Flutter root directory, based on the known location of
 /// this script.
-final Directory flutterRoot = Directory(path.dirname(Platform.script.toFilePath())).parent.parent.parent.parent;
+final Directory flutterRoot =
+    Directory(path.dirname(Platform.script.toFilePath())).parent.parent.parent.parent;
 String get dataRoot => testDataRoot ?? _dataRoot;
 String _dataRoot = path.join(flutterRoot.path, 'dev', 'tools', 'gen_keycodes', 'data');
 
@@ -153,9 +154,6 @@ String wrapString(String input, {required String prefix}) {
 ///
 /// An null list is considered a list with length 0.
 void zipStrict<T1, T2>(Iterable<T1> list1, Iterable<T2> list2, void Function(T1, T2) fn) {
-  if (list1 == null && list2 == null) {
-    return;
-  }
   assert(list1.length == list2.length);
   final Iterator<T1> it1 = list1.iterator;
   final Iterator<T2> it2 = list2.iterator;
@@ -172,14 +170,16 @@ Map<String, String> parseMapOfString(String jsonString) {
 
 /// Read a Map<String, List<String>> out of its string representation in JSON.
 Map<String, List<String>> parseMapOfListOfString(String jsonString) {
-  final Map<String, List<dynamic>> dynamicMap = (json.decode(jsonString) as Map<String, dynamic>).cast<String, List<dynamic>>();
+  final Map<String, List<dynamic>> dynamicMap =
+      (json.decode(jsonString) as Map<String, dynamic>).cast<String, List<dynamic>>();
   return dynamicMap.map<String, List<String>>((String key, List<dynamic> value) {
     return MapEntry<String, List<String>>(key, value.cast<String>());
   });
 }
 
 Map<String, List<String?>> parseMapOfListOfNullableString(String jsonString) {
-  final Map<String, List<dynamic>> dynamicMap = (json.decode(jsonString) as Map<String, dynamic>).cast<String, List<dynamic>>();
+  final Map<String, List<dynamic>> dynamicMap =
+      (json.decode(jsonString) as Map<String, dynamic>).cast<String, List<dynamic>>();
   return dynamicMap.map<String, List<String?>>((String key, List<dynamic> value) {
     return MapEntry<String, List<String?>>(key, value.cast<String?>());
   });
@@ -190,7 +190,10 @@ Map<String, bool> parseMapOfBool(String jsonString) {
 }
 
 /// Reverse the map of { fromValue -> list of toValue } to { toValue -> fromValue } and return.
-Map<String, String> reverseMapOfListOfString(Map<String, List<String>> inMap, void Function(String fromValue, String newToValue) onDuplicate) {
+Map<String, String> reverseMapOfListOfString(
+  Map<String, List<String>> inMap,
+  void Function(String fromValue, String newToValue) onDuplicate,
+) {
   final Map<String, String> result = <String, String>{};
   inMap.forEach((String fromValue, List<String> toValues) {
     for (final String toValue in toValues) {
@@ -208,19 +211,14 @@ Map<String, String> reverseMapOfListOfString(Map<String, List<String>> inMap, vo
 ///
 /// Will modify the input map.
 Map<String, dynamic> removeEmptyValues(Map<String, dynamic> map) {
-  return map..removeWhere((String key, dynamic value) {
-    if (value == null) {
-      return true;
-    }
-    if (value is Map<String, dynamic>) {
-      final Map<String, dynamic> regularizedMap = removeEmptyValues(value);
-      return regularizedMap.isEmpty;
-    }
-    if (value is Iterable<dynamic>) {
-      return value.isEmpty;
-    }
-    return false;
-  });
+  return map..removeWhere(
+    (String key, dynamic value) => switch (value) {
+      null => true,
+      Map<String, dynamic>() => removeEmptyValues(value).isEmpty,
+      Iterable<dynamic>() => value.isEmpty,
+      _ => false,
+    },
+  );
 }
 
 void addNameValue(List<String> names, List<int> values, String name, int value) {
@@ -248,8 +246,7 @@ enum DeduplicateBehavior {
 
 /// The information for a line used by [OutputLines].
 class OutputLine<T extends Comparable<Object>> {
-  OutputLine(this.key, String value)
-    : values = <String>[value];
+  OutputLine(this.key, String value) : values = <String>[value];
 
   final T key;
   final List<String> values;
@@ -278,7 +275,9 @@ class OutputLines<T extends Comparable<Object>> {
     if (existing != null) {
       switch (behavior) {
         case DeduplicateBehavior.kWarn:
-          print('Warn: Request to add $key to map "$mapName" as:\n    $line\n  but it already exists as:\n    ${existing.values[0]}');
+          print(
+            'Warn: Request to add $key to map "$mapName" as:\n    $line\n  but it already exists as:\n    ${existing.values[0]}',
+          );
           return;
         case DeduplicateBehavior.kSkip:
           return;
@@ -296,9 +295,9 @@ class OutputLines<T extends Comparable<Object>> {
 
   String sortedJoin() {
     return (lines.values.toList()
-      ..sort((OutputLine<T> a, OutputLine<T> b) => a.key.compareTo(b.key)))
-      .map((OutputLine<T> line) => line.values.join('\n'))
-      .join('\n');
+          ..sort((OutputLine<T> a, OutputLine<T> b) => a.key.compareTo(b.key)))
+        .map((OutputLine<T> line) => line.values.join('\n'))
+        .join('\n');
   }
 }
 

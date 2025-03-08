@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+/// @docImport 'package:flutter/material.dart';
+library;
+
 import 'framework.dart';
 
 // Examples can assume:
@@ -34,10 +37,7 @@ abstract class InheritedTheme extends InheritedWidget {
   /// Abstract const constructor. This constructor enables subclasses to provide
   /// const constructors so that they can be used in const expressions.
 
-  const InheritedTheme({
-    super.key,
-    required super.child,
-  });
+  const InheritedTheme({super.key, required super.child});
 
   /// Return a copy of this inherited theme with the specified [child].
   ///
@@ -64,9 +64,6 @@ abstract class InheritedTheme extends InheritedWidget {
   /// the wrapped `child` - unless this method is called again to re-wrap the
   /// child.
   static Widget captureAll(BuildContext context, Widget child, {BuildContext? to}) {
-    assert(child != null);
-    assert(context != null);
-
     return capture(from: context, to: to).wrap(child);
   }
 
@@ -87,9 +84,7 @@ abstract class InheritedTheme extends InheritedWidget {
   ///
   /// This method can be expensive if there are many widgets between `from` and
   /// `to` (it walks the element tree between those nodes).
-  static CapturedThemes capture({ required BuildContext from, required BuildContext? to }) {
-    assert(from != null);
-
+  static CapturedThemes capture({required BuildContext from, required BuildContext? to}) {
     if (from == to) {
       // Nothing to capture.
       return CapturedThemes._(const <InheritedTheme>[]);
@@ -110,8 +105,7 @@ abstract class InheritedTheme extends InheritedWidget {
         }());
         return false;
       }
-      if (ancestor is InheritedElement && ancestor.widget is InheritedTheme) {
-        final InheritedTheme theme = ancestor.widget as InheritedTheme;
+      if (ancestor case InheritedElement(widget: final InheritedTheme theme)) {
         final Type themeType = theme.runtimeType;
         // Only remember the first theme of any type. This assumes
         // that inherited themes completely shadow ancestors of the
@@ -124,7 +118,10 @@ abstract class InheritedTheme extends InheritedWidget {
       return true;
     });
 
-    assert(debugDidFindAncestor, 'The provided `to` context must be an ancestor of the `from` context.');
+    assert(
+      debugDidFindAncestor,
+      'The provided `to` context must be an ancestor of the `from` context.',
+    );
     return CapturedThemes._(themes);
   }
 }
@@ -145,10 +142,7 @@ class CapturedThemes {
 }
 
 class _CaptureAll extends StatelessWidget {
-  const _CaptureAll({
-    required this.themes,
-    required this.child,
-  }) : assert(themes != null), assert(child != null);
+  const _CaptureAll({required this.themes, required this.child});
 
   final List<InheritedTheme> themes;
   final Widget child;

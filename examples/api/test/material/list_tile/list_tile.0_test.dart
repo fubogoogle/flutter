@@ -10,9 +10,7 @@ void main() {
   testWidgets('ListTile with Hero does not throw', (WidgetTester tester) async {
     const int totalTiles = 3;
 
-    await tester.pumpWidget(
-      const example.ListTileApp(),
-    );
+    await tester.pumpWidget(const example.ListTileApp());
 
     expect(find.byType(ListTile), findsNWidgets(totalTiles));
 
@@ -21,8 +19,12 @@ void main() {
 
     expect(find.text(heroTransitionText), findsOneWidget);
     expect(find.text(goBackText), findsNothing);
+
+    // Tap on the ListTile widget to trigger the Hero transition.
     await tester.tap(find.text(heroTransitionText));
     await tester.pumpAndSettle();
+
+    // The Hero transition is triggered and tap to go back text is displayed.
     expect(find.text(heroTransitionText), findsNothing);
     expect(find.text(goBackText), findsOneWidget);
 

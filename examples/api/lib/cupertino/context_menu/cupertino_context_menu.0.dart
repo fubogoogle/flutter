@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// Flutter code sample for [CupertinoContextMenu].
-
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
+
+/// Flutter code sample for [CupertinoContextMenu].
 
 void main() => runApp(const ContextMenuApp());
 
@@ -27,9 +26,7 @@ class ContextMenuExample extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(
-        middle: Text('CupertinoContextMenu Sample'),
-      ),
+      navigationBar: const CupertinoNavigationBar(middle: Text('CupertinoContextMenu Sample')),
       child: Center(
         child: SizedBox(
           width: 100,
@@ -49,7 +46,7 @@ class ContextMenuExample extends StatelessWidget {
                   Navigator.pop(context);
                 },
                 trailingIcon: CupertinoIcons.share,
-                child: const Text('Share  '),
+                child: const Text('Share'),
               ),
               CupertinoContextMenuAction(
                 onPressed: () {
@@ -67,12 +64,9 @@ class ContextMenuExample extends StatelessWidget {
                 child: const Text('Delete'),
               ),
             ],
-            child: Container(
-              decoration: BoxDecoration(
-                color: CupertinoColors.systemYellow,
-                borderRadius: BorderRadius.circular(20.0),
-              ),
-              child: const FlutterLogo(size: 500.0),
+            child: const ColoredBox(
+              color: CupertinoColors.systemYellow,
+              child: FlutterLogo(size: 500.0),
             ),
           ),
         ),

@@ -2,12 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+/// @docImport 'package:flutter/material.dart';
+library;
+
 import 'dart:ui' show Color, lerpDouble;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 
+import 'action_buttons.dart';
+import 'action_icons_theme.dart';
 import 'app_bar_theme.dart';
+import 'badge_theme.dart';
 import 'banner_theme.dart';
 import 'bottom_app_bar_theme.dart';
 import 'bottom_navigation_bar_theme.dart';
@@ -21,9 +27,11 @@ import 'color_scheme.dart';
 import 'colors.dart';
 import 'constants.dart';
 import 'data_table_theme.dart';
+import 'date_picker_theme.dart';
 import 'dialog_theme.dart';
 import 'divider_theme.dart';
 import 'drawer_theme.dart';
+import 'dropdown_menu_theme.dart';
 import 'elevated_button_theme.dart';
 import 'expansion_tile_theme.dart';
 import 'filled_button_theme.dart';
@@ -36,7 +44,11 @@ import 'ink_well.dart' show InteractiveInkFeatureFactory;
 import 'input_decorator.dart';
 import 'list_tile.dart';
 import 'list_tile_theme.dart';
+import 'menu_bar_theme.dart';
+import 'menu_button_theme.dart';
+import 'menu_theme.dart';
 import 'navigation_bar_theme.dart';
+import 'navigation_drawer_theme.dart';
 import 'navigation_rail_theme.dart';
 import 'outlined_button_theme.dart';
 import 'page_transitions_theme.dart';
@@ -44,6 +56,9 @@ import 'popup_menu_theme.dart';
 import 'progress_indicator_theme.dart';
 import 'radio_theme.dart';
 import 'scrollbar_theme.dart';
+import 'search_bar_theme.dart';
+import 'search_view_theme.dart';
+import 'segmented_button_theme.dart';
 import 'slider_theme.dart';
 import 'snack_bar_theme.dart';
 import 'switch_theme.dart';
@@ -61,7 +76,41 @@ export 'package:flutter/services.dart' show Brightness;
 // Examples can assume:
 // late BuildContext context;
 
+/// Defines a customized theme for components with an `adaptive` factory constructor.
+///
+/// Currently, only [Switch.adaptive] supports this class.
+class Adaptation<T> {
+  /// Creates an [Adaptation].
+  const Adaptation();
+
+  /// The adaptation's type.
+  Type get type => T;
+
+  /// Typically, this is overridden to return an instance of a custom component
+  /// ThemeData class, like [SwitchThemeData], instead of the defaultValue.
+  ///
+  /// Factory constructors that support adaptations - currently only
+  /// [Switch.adaptive] - look for a type-specific adaptation in
+  /// [ThemeData.adaptationMap] when computing their effective default component
+  /// theme. If a matching adaptation is not found, the component may choose to
+  /// use a default adaptation. For example, the [Switch.adaptive] component
+  /// uses an empty [SwitchThemeData] if a matching adaptation is not found, for
+  /// the sake of backwards compatibility.
+  ///
+  /// {@tool dartpad}
+  /// This sample shows how to create and use subclasses of [Adaptation] that
+  /// define adaptive [SwitchThemeData]s. The [adapt] method in this example is
+  /// overridden to only customize cupertino-style switches, but it can also be
+  /// used to customize any other platforms.
+  ///
+  /// ** See code in examples/api/lib/material/switch/switch.4.dart **
+  /// {@end-tool}
+  T adapt(ThemeData theme, T defaultValue) => defaultValue;
+}
+
 /// An interface that defines custom additions to a [ThemeData] object.
+///
+/// {@youtube 560 315 https://www.youtube.com/watch?v=8-szcYzFVao}
 ///
 /// Typically used for custom colors. To use, subclass [ThemeExtension],
 /// define a number of fields (e.g. [Color]s), and implement the [copyWith] and
@@ -90,23 +139,6 @@ abstract class ThemeExtension<T extends ThemeExtension<T>> {
   /// {@macro dart.ui.shadow.lerp}
   ThemeExtension<T> lerp(covariant ThemeExtension<T>? other, double t);
 }
-
-// Deriving these values is black magic. The spec claims that pressed buttons
-// have a highlight of 0x66999999, but that's clearly wrong. The videos in the
-// spec show that buttons have a composited highlight of #E1E1E1 on a background
-// of #FAFAFA. Assuming that the highlight really has an opacity of 0x66, we can
-// solve for the actual color of the highlight:
-const Color _kLightThemeHighlightColor = Color(0x66BCBCBC);
-
-// The same video shows the splash compositing to #D7D7D7 on a background of
-// #E1E1E1. Again, assuming the splash has an opacity of 0x66, we can solve for
-// the actual color of the splash:
-const Color _kLightThemeSplashColor = Color(0x66C8C8C8);
-
-// Unfortunately, a similar video isn't available for the dark theme, which
-// means we assume the values in the spec are actually correct.
-const Color _kDarkThemeHighlightColor = Color(0x40CCCCCC);
-const Color _kDarkThemeSplashColor = Color(0x40CCCCCC);
 
 /// Configures the tap target and layout size of certain Material widgets.
 ///
@@ -149,7 +181,7 @@ enum MaterialTapTargetSize {
 /// or a widget subtree within the app.
 ///
 /// The [MaterialApp] theme property can be used to configure the appearance
-/// of the entire app. Widget subtree's within an app can override the app's
+/// of the entire app. Widget subtrees within an app can override the app's
 /// theme by including a [Theme] widget at the top of the subtree.
 ///
 /// Widgets whose appearance should align with the overall theme can obtain the
@@ -165,68 +197,15 @@ enum MaterialTapTargetSize {
 /// for the subtree that appears below the new [Theme], or insert a widget
 /// that creates a new BuildContext, like [Builder].
 ///
-/// {@tool snippet}
-/// In this example, the [Container] widget uses [Theme.of] to retrieve the
-/// primary color from the theme's [colorScheme] to draw an amber square.
-/// The [Builder] widget separates the parent theme's [BuildContext] from the
-/// child's [BuildContext].
+/// {@tool dartpad}
+/// This example demonstrates how a typical [MaterialApp] specifies
+/// and uses a custom [Theme]. The theme's [ColorScheme] is based on a
+/// single "seed" color and configures itself to match the platform's
+/// current light or dark color configuration. The theme overrides the
+/// default configuration of [FloatingActionButton] to show how to
+/// customize the appearance a class of components.
 ///
-/// ![](https://flutter.github.io/assets-for-api-docs/assets/material/theme_data.png)
-///
-/// ```dart
-/// Theme(
-///   data: ThemeData.from(
-///     colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.amber),
-///   ),
-///   child: Builder(
-///     builder: (BuildContext context) {
-///       return Container(
-///         width: 100,
-///         height: 100,
-///         color: Theme.of(context).colorScheme.primary,
-///       );
-///     },
-///   ),
-/// )
-/// ```
-/// {@end-tool}
-///
-/// {@tool snippet}
-///
-/// This sample creates a [MaterialApp] with a [Theme] whose
-/// [ColorScheme] is based on [Colors.blue], but with the color
-/// scheme's [ColorScheme.secondary] color overridden to be green. The
-/// [AppBar] widget uses the color scheme's [ColorScheme.primary] as
-/// its default background color and the [FloatingActionButton] widget
-/// uses the color scheme's [ColorScheme.secondary] for its default
-/// background. By default, the [Text] widget uses
-/// [TextTheme.bodyMedium], and the color of that [TextStyle] has been
-/// changed to purple.
-///
-/// ![](https://flutter.github.io/assets-for-api-docs/assets/material/material_app_theme_data.png)
-///
-/// ```dart
-/// MaterialApp(
-///   theme: ThemeData(
-///     colorScheme: ColorScheme.fromSwatch().copyWith(
-///       secondary: Colors.green,
-///     ),
-///     textTheme: const TextTheme(bodyMedium: TextStyle(color: Colors.purple)),
-///   ),
-///   home: Scaffold(
-///     appBar: AppBar(
-///       title: const Text('ThemeData Demo'),
-///     ),
-///     floatingActionButton: FloatingActionButton(
-///       child: const Icon(Icons.add),
-///       onPressed: () {},
-///     ),
-///     body: const Center(
-///       child: Text('Button pressed 0 times'),
-///     ),
-///   ),
-/// )
-/// ```
+/// ** See code in examples/api/lib/material/theme_data/theme_data.0.dart **
 /// {@end-tool}
 ///
 /// See <https://material.io/design/color/> for
@@ -270,8 +249,8 @@ class ThemeData with Diagnosticable {
   /// See also:
   ///
   ///  * [ThemeData.from], which creates a ThemeData from a [ColorScheme].
-  ///  * [ThemeData.light], which creates a light blue theme.
-  ///  * [ThemeData.dark], which creates dark theme with a teal secondary [ColorScheme] color.
+  ///  * [ThemeData.light], which creates the default light theme.
+  ///  * [ThemeData.dark], which creates the default dark theme.
   ///  * [ColorScheme.fromSeed], which is used to create a [ColorScheme] from a seed color.
   factory ThemeData({
     // For the sanity of the reader, make sure these properties are in the same
@@ -280,6 +259,7 @@ class ThemeData with Diagnosticable {
     // alphabetical by symbol name.
 
     // GENERAL CONFIGURATION
+    Iterable<Adaptation<Object>>? adaptations,
     bool? applyElevationOverlayColor,
     NoDefaultCupertinoThemeData? cupertinoOverrideTheme,
     Iterable<ThemeExtension<dynamic>>? extensions,
@@ -292,22 +272,20 @@ class ThemeData with Diagnosticable {
     bool? useMaterial3,
     VisualDensity? visualDensity,
     // COLOR
-    // [colorScheme] is the preferred way to configure colors. The other color
-    // properties (as well as primaryColorBrightness, and primarySwatch)
-    // will gradually be phased out, see https://github.com/flutter/flutter/issues/91772.
+    ColorScheme? colorScheme,
     Brightness? brightness,
+    Color? colorSchemeSeed,
+    // [colorScheme] is the preferred way to configure colors. The [Color] properties
+    // listed below (as well as primarySwatch) will gradually be phased out, see
+    // https://github.com/flutter/flutter/issues/91772.
     Color? canvasColor,
     Color? cardColor,
-    ColorScheme? colorScheme,
-    Color? colorSchemeSeed,
-    Color? dialogBackgroundColor,
     Color? disabledColor,
     Color? dividerColor,
     Color? focusColor,
     Color? highlightColor,
     Color? hintColor,
     Color? hoverColor,
-    Color? indicatorColor,
     Color? primaryColor,
     Color? primaryColorDark,
     Color? primaryColorLight,
@@ -319,42 +297,54 @@ class ThemeData with Diagnosticable {
     Color? unselectedWidgetColor,
     // TYPOGRAPHY & ICONOGRAPHY
     String? fontFamily,
+    List<String>? fontFamilyFallback,
+    String? package,
     IconThemeData? iconTheme,
     IconThemeData? primaryIconTheme,
     TextTheme? primaryTextTheme,
     TextTheme? textTheme,
     Typography? typography,
     // COMPONENT THEMES
+    ActionIconThemeData? actionIconTheme,
     AppBarTheme? appBarTheme,
+    BadgeThemeData? badgeTheme,
     MaterialBannerThemeData? bannerTheme,
     BottomAppBarTheme? bottomAppBarTheme,
     BottomNavigationBarThemeData? bottomNavigationBarTheme,
     BottomSheetThemeData? bottomSheetTheme,
-    ButtonBarThemeData? buttonBarTheme,
     ButtonThemeData? buttonTheme,
-    CardTheme? cardTheme,
+    CardThemeData? cardTheme,
     CheckboxThemeData? checkboxTheme,
     ChipThemeData? chipTheme,
     DataTableThemeData? dataTableTheme,
-    DialogTheme? dialogTheme,
+    DatePickerThemeData? datePickerTheme,
+    DialogThemeData? dialogTheme,
     DividerThemeData? dividerTheme,
     DrawerThemeData? drawerTheme,
+    DropdownMenuThemeData? dropdownMenuTheme,
     ElevatedButtonThemeData? elevatedButtonTheme,
     ExpansionTileThemeData? expansionTileTheme,
     FilledButtonThemeData? filledButtonTheme,
     FloatingActionButtonThemeData? floatingActionButtonTheme,
     IconButtonThemeData? iconButtonTheme,
     ListTileThemeData? listTileTheme,
+    MenuBarThemeData? menuBarTheme,
+    MenuButtonThemeData? menuButtonTheme,
+    MenuThemeData? menuTheme,
     NavigationBarThemeData? navigationBarTheme,
+    NavigationDrawerThemeData? navigationDrawerTheme,
     NavigationRailThemeData? navigationRailTheme,
     OutlinedButtonThemeData? outlinedButtonTheme,
     PopupMenuThemeData? popupMenuTheme,
     ProgressIndicatorThemeData? progressIndicatorTheme,
     RadioThemeData? radioTheme,
+    SearchBarThemeData? searchBarTheme,
+    SearchViewThemeData? searchViewTheme,
+    SegmentedButtonThemeData? segmentedButtonTheme,
     SliderThemeData? sliderTheme,
     SnackBarThemeData? snackBarTheme,
     SwitchThemeData? switchTheme,
-    TabBarTheme? tabBarTheme,
+    TabBarThemeData? tabBarTheme,
     TextButtonThemeData? textButtonTheme,
     TextSelectionThemeData? textSelectionTheme,
     TimePickerThemeData? timePickerTheme,
@@ -362,84 +352,25 @@ class ThemeData with Diagnosticable {
     TooltipThemeData? tooltipTheme,
     // DEPRECATED (newest deprecations at the bottom)
     @Deprecated(
-      'Use colorScheme.secondary instead. '
-      'For more information, consult the migration guide at '
-      'https://flutter.dev/docs/release/breaking-changes/theme-data-accent-properties#migration-guide. '
-      'This feature was deprecated after v2.3.0-0.1.pre.',
+      'Use OverflowBar instead. '
+      'This feature was deprecated after v3.21.0-10.0.pre.',
     )
-    Color? accentColor,
+    ButtonBarThemeData? buttonBarTheme,
     @Deprecated(
-      'No longer used by the framework, please remove any reference to it. '
-      'For more information, consult the migration guide at '
-      'https://flutter.dev/docs/release/breaking-changes/theme-data-accent-properties#migration-guide. '
-      'This feature was deprecated after v2.3.0-0.1.pre.',
+      'Use DialogThemeData.backgroundColor instead. '
+      'This feature was deprecated after v3.27.0-0.1.pre.',
     )
-    Brightness? accentColorBrightness,
+    Color? dialogBackgroundColor,
     @Deprecated(
-      'No longer used by the framework, please remove any reference to it. '
-      'For more information, consult the migration guide at '
-      'https://flutter.dev/docs/release/breaking-changes/theme-data-accent-properties#migration-guide. '
-      'This feature was deprecated after v2.3.0-0.1.pre.',
+      'Use TabBarThemeData.indicatorColor instead. '
+      'This feature was deprecated after v3.28.0-1.0.pre.',
     )
-    TextTheme? accentTextTheme,
-    @Deprecated(
-      'No longer used by the framework, please remove any reference to it. '
-      'For more information, consult the migration guide at '
-      'https://flutter.dev/docs/release/breaking-changes/theme-data-accent-properties#migration-guide. '
-      'This feature was deprecated after v2.3.0-0.1.pre.',
-    )
-    IconThemeData? accentIconTheme,
-    @Deprecated(
-      'No longer used by the framework, please remove any reference to it. '
-      'This feature was deprecated after v2.3.0-0.2.pre.',
-    )
-    Color? buttonColor,
-    @Deprecated(
-      'This "fix" is now enabled by default. '
-      'This feature was deprecated after v2.5.0-1.0.pre.',
-    )
-    bool? fixTextFieldOutlineLabel,
-    @Deprecated(
-      'No longer used by the framework, please remove any reference to it. '
-      'This feature was deprecated after v2.6.0-11.0.pre.',
-    )
-    Brightness? primaryColorBrightness,
-    @Deprecated(
-      'Use ThemeData.useMaterial3 or override ScrollBehavior.buildOverscrollIndicator. '
-      'This feature was deprecated after v2.13.0-0.0.pre.'
-    )
-    AndroidOverscrollIndicator? androidOverscrollIndicator,
-    @Deprecated(
-      'No longer used by the framework, please remove any reference to it. '
-      'For more information, consult the migration guide at '
-      'https://flutter.dev/docs/release/breaking-changes/toggleable-active-color#migration-guide. '
-      'This feature was deprecated after v2.13.0-0.4.pre.',
-    )
-    Color? toggleableActiveColor,
-    @Deprecated(
-      'No longer used by the framework, please remove any reference to it. '
-      'This feature was deprecated after v3.1.0-0.0.pre.',
-    )
-    Color? selectedRowColor,
-    @Deprecated(
-      'Use colorScheme.error instead. '
-      'This feature was deprecated after v3.3.0-0.5.pre.',
-    )
-    Color? errorColor,
-    @Deprecated(
-      'Use colorScheme.background instead. '
-      'This feature was deprecated after v3.3.0-0.5.pre.',
-    )
-    Color? backgroundColor,
-    @Deprecated(
-      'Use BottomAppBarTheme.color instead. '
-      'This feature was deprecated after v3.3.0-0.6.pre.',
-    )
-    Color? bottomAppBarColor,
+    Color? indicatorColor,
   }) {
     // GENERAL CONFIGURATION
     cupertinoOverrideTheme = cupertinoOverrideTheme?.noDefault();
     extensions ??= <ThemeExtension<dynamic>>[];
+    adaptations ??= <Adaptation<Object>>[];
     inputDecorationTheme ??= const InputDecorationTheme();
     platform ??= defaultTargetPlatform;
     switch (platform) {
@@ -447,50 +378,59 @@ class ThemeData with Diagnosticable {
       case TargetPlatform.fuchsia:
       case TargetPlatform.iOS:
         materialTapTargetSize ??= MaterialTapTargetSize.padded;
-        break;
       case TargetPlatform.linux:
       case TargetPlatform.macOS:
       case TargetPlatform.windows:
-         materialTapTargetSize ??= MaterialTapTargetSize.shrinkWrap;
-        break;
+        materialTapTargetSize ??= MaterialTapTargetSize.shrinkWrap;
     }
     pageTransitionsTheme ??= const PageTransitionsTheme();
     scrollbarTheme ??= const ScrollbarThemeData();
-    visualDensity ??= VisualDensity.adaptivePlatformDensity;
-    useMaterial3 ??= false;
+    visualDensity ??= VisualDensity.defaultDensityForPlatform(platform);
+    useMaterial3 ??= true;
     final bool useInkSparkle = platform == TargetPlatform.android && !kIsWeb;
-    splashFactory ??= useMaterial3
-      ? useInkSparkle ? InkSparkle.splashFactory : InkRipple.splashFactory
-      : InkSplash.splashFactory;
+    splashFactory ??=
+        useMaterial3
+            ? useInkSparkle
+                ? InkSparkle.splashFactory
+                : InkRipple.splashFactory
+            : InkSplash.splashFactory;
 
     // COLOR
-    assert(colorScheme?.brightness == null || brightness == null || colorScheme!.brightness == brightness);
+    assert(
+      colorScheme?.brightness == null ||
+          brightness == null ||
+          colorScheme!.brightness == brightness,
+      'ThemeData.brightness does not match ColorScheme.brightness. '
+      'Either override ColorScheme.brightness or ThemeData.brightness to '
+      'match the other.',
+    );
     assert(colorSchemeSeed == null || colorScheme == null);
     assert(colorSchemeSeed == null || primarySwatch == null);
     assert(colorSchemeSeed == null || primaryColor == null);
-    final Brightness effectiveBrightness = brightness ?? colorScheme?.brightness ?? Brightness.light;
+    final Brightness effectiveBrightness =
+        brightness ?? colorScheme?.brightness ?? Brightness.light;
     final bool isDark = effectiveBrightness == Brightness.dark;
-    if (colorSchemeSeed != null) {
-      colorScheme = ColorScheme.fromSeed(seedColor: colorSchemeSeed, brightness: effectiveBrightness);
+    if (colorSchemeSeed != null || useMaterial3) {
+      if (colorSchemeSeed != null) {
+        colorScheme = ColorScheme.fromSeed(
+          seedColor: colorSchemeSeed,
+          brightness: effectiveBrightness,
+        );
+      }
+      colorScheme ??= isDark ? _colorSchemeDarkM3 : _colorSchemeLightM3;
 
       // For surfaces that use primary color in light themes and surface color in dark
       final Color primarySurfaceColor = isDark ? colorScheme.surface : colorScheme.primary;
       final Color onPrimarySurfaceColor = isDark ? colorScheme.onSurface : colorScheme.onPrimary;
 
       // Default some of the color settings to values from the color scheme
-      primaryColor = primarySurfaceColor;
-      primaryColorBrightness = ThemeData.estimateBrightnessForColor(primarySurfaceColor);
-      canvasColor ??= colorScheme.background;
-      accentColor ??= colorScheme.secondary;
-      accentColorBrightness ??= ThemeData.estimateBrightnessForColor(colorScheme.secondary);
-      scaffoldBackgroundColor ??= colorScheme.background;
-      bottomAppBarColor ??= colorScheme.surface;
+      primaryColor ??= primarySurfaceColor;
+      canvasColor ??= colorScheme.surface;
+      scaffoldBackgroundColor ??= colorScheme.surface;
       cardColor ??= colorScheme.surface;
       dividerColor ??= colorScheme.outline;
-      backgroundColor ??= colorScheme.background;
-      dialogBackgroundColor ??= colorScheme.background;
+      dialogBackgroundColor ??= colorScheme.surface;
       indicatorColor ??= onPrimarySurfaceColor;
-      errorColor ??= colorScheme.error;
       applyElevationOverlayColor ??= brightness == Brightness.dark;
     }
     applyElevationOverlayColor ??= false;
@@ -500,10 +440,6 @@ class ThemeData with Diagnosticable {
     primaryColorLight ??= isDark ? Colors.grey[500]! : primarySwatch[100]!;
     primaryColorDark ??= isDark ? Colors.black : primarySwatch[700]!;
     final bool primaryIsDark = estimatedPrimaryColorBrightness == Brightness.dark;
-    toggleableActiveColor ??= isDark ? Colors.tealAccent[200]! : (accentColor ?? primarySwatch[600]!);
-    accentColor ??= isDark ? Colors.tealAccent[200]! : primarySwatch[500]!;
-    accentColorBrightness ??= estimateBrightnessForColor(accentColor);
-    final bool accentIsDark = accentColorBrightness == Brightness.dark;
     focusColor ??= isDark ? Colors.white.withOpacity(0.12) : Colors.black.withOpacity(0.12);
     hoverColor ??= isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.04);
     shadowColor ??= Colors.black;
@@ -515,25 +451,21 @@ class ThemeData with Diagnosticable {
     // with the existing default ThemeData color values.
     colorScheme ??= ColorScheme.fromSwatch(
       primarySwatch: primarySwatch,
-      primaryColorDark: primaryColorDark,
-      accentColor: accentColor,
+      accentColor: isDark ? Colors.tealAccent[200]! : primarySwatch[500]!,
       cardColor: cardColor,
       backgroundColor: isDark ? Colors.grey[700]! : primarySwatch[200]!,
       errorColor: Colors.red[700],
       brightness: effectiveBrightness,
     );
-    selectedRowColor ??= Colors.grey[100]!;
     unselectedWidgetColor ??= isDark ? Colors.white70 : Colors.black54;
     // Spec doesn't specify a dark theme secondaryHeaderColor, this is a guess.
     secondaryHeaderColor ??= isDark ? Colors.grey[700]! : primarySwatch[50]!;
-    dialogBackgroundColor ??= isDark ? Colors.grey[800]! : Colors.white;
-    indicatorColor ??= accentColor == primaryColor ? Colors.white : accentColor;
     hintColor ??= isDark ? Colors.white60 : Colors.black.withOpacity(0.6);
     // The default [buttonTheme] is here because it doesn't use the defaults for
     // [disabledColor], [highlightColor], and [splashColor].
     buttonTheme ??= ButtonThemeData(
       colorScheme: colorScheme,
-      buttonColor: buttonColor ?? (isDark ? primarySwatch[600]! : Colors.grey[300]!),
+      buttonColor: isDark ? primarySwatch[600]! : Colors.grey[300]!,
       disabledColor: disabledColor,
       focusColor: focusColor,
       hoverColor: hoverColor,
@@ -542,70 +474,89 @@ class ThemeData with Diagnosticable {
       materialTapTargetSize: materialTapTargetSize,
     );
     disabledColor ??= isDark ? Colors.white38 : Colors.black38;
-    highlightColor ??= isDark ? _kDarkThemeHighlightColor : _kLightThemeHighlightColor;
-    splashColor ??= isDark ? _kDarkThemeSplashColor : _kLightThemeSplashColor;
+    highlightColor ??= isDark ? const Color(0x40CCCCCC) : const Color(0x66BCBCBC);
+    splashColor ??= isDark ? const Color(0x40CCCCCC) : const Color(0x66C8C8C8);
 
     // TYPOGRAPHY & ICONOGRAPHY
-    typography ??= useMaterial3 ? Typography.material2021(platform: platform) : Typography.material2014(platform: platform);
+    typography ??=
+        useMaterial3
+            ? Typography.material2021(platform: platform, colorScheme: colorScheme)
+            : Typography.material2014(platform: platform);
     TextTheme defaultTextTheme = isDark ? typography.white : typography.black;
     TextTheme defaultPrimaryTextTheme = primaryIsDark ? typography.white : typography.black;
-    TextTheme defaultAccentTextTheme = accentIsDark ? typography.white : typography.black;
     if (fontFamily != null) {
       defaultTextTheme = defaultTextTheme.apply(fontFamily: fontFamily);
       defaultPrimaryTextTheme = defaultPrimaryTextTheme.apply(fontFamily: fontFamily);
-      defaultAccentTextTheme = defaultAccentTextTheme.apply(fontFamily: fontFamily);
+    }
+    if (fontFamilyFallback != null) {
+      defaultTextTheme = defaultTextTheme.apply(fontFamilyFallback: fontFamilyFallback);
+      defaultPrimaryTextTheme = defaultPrimaryTextTheme.apply(
+        fontFamilyFallback: fontFamilyFallback,
+      );
+    }
+    if (package != null) {
+      defaultTextTheme = defaultTextTheme.apply(package: package);
+      defaultPrimaryTextTheme = defaultPrimaryTextTheme.apply(package: package);
     }
     textTheme = defaultTextTheme.merge(textTheme);
     primaryTextTheme = defaultPrimaryTextTheme.merge(primaryTextTheme);
-    iconTheme ??= isDark ? const IconThemeData(color: kDefaultIconLightColor) : const IconThemeData(color: kDefaultIconDarkColor);
-    primaryIconTheme ??= primaryIsDark ? const IconThemeData(color: Colors.white) : const IconThemeData(color: Colors.black);
+    iconTheme ??=
+        isDark
+            ? IconThemeData(color: kDefaultIconLightColor)
+            : IconThemeData(color: kDefaultIconDarkColor);
+    primaryIconTheme ??=
+        primaryIsDark
+            ? const IconThemeData(color: Colors.white)
+            : const IconThemeData(color: Colors.black);
 
     // COMPONENT THEMES
     appBarTheme ??= const AppBarTheme();
+    badgeTheme ??= const BadgeThemeData();
     bannerTheme ??= const MaterialBannerThemeData();
     bottomAppBarTheme ??= const BottomAppBarTheme();
     bottomNavigationBarTheme ??= const BottomNavigationBarThemeData();
     bottomSheetTheme ??= const BottomSheetThemeData();
-    buttonBarTheme ??= const ButtonBarThemeData();
-    cardTheme ??= const CardTheme();
-    chipTheme ??= const ChipThemeData();
+    cardTheme ??= const CardThemeData();
     checkboxTheme ??= const CheckboxThemeData();
+    chipTheme ??= const ChipThemeData();
     dataTableTheme ??= const DataTableThemeData();
-    dialogTheme ??= const DialogTheme();
+    datePickerTheme ??= const DatePickerThemeData();
+    dialogTheme ??= const DialogThemeData();
     dividerTheme ??= const DividerThemeData();
     drawerTheme ??= const DrawerThemeData();
+    dropdownMenuTheme ??= const DropdownMenuThemeData();
     elevatedButtonTheme ??= const ElevatedButtonThemeData();
+    expansionTileTheme ??= const ExpansionTileThemeData();
     filledButtonTheme ??= const FilledButtonThemeData();
     floatingActionButtonTheme ??= const FloatingActionButtonThemeData();
     iconButtonTheme ??= const IconButtonThemeData();
     listTileTheme ??= const ListTileThemeData();
+    menuBarTheme ??= const MenuBarThemeData();
+    menuButtonTheme ??= const MenuButtonThemeData();
+    menuTheme ??= const MenuThemeData();
     navigationBarTheme ??= const NavigationBarThemeData();
+    navigationDrawerTheme ??= const NavigationDrawerThemeData();
     navigationRailTheme ??= const NavigationRailThemeData();
     outlinedButtonTheme ??= const OutlinedButtonThemeData();
     popupMenuTheme ??= const PopupMenuThemeData();
     progressIndicatorTheme ??= const ProgressIndicatorThemeData();
     radioTheme ??= const RadioThemeData();
+    searchBarTheme ??= const SearchBarThemeData();
+    searchViewTheme ??= const SearchViewThemeData();
+    segmentedButtonTheme ??= const SegmentedButtonThemeData();
     sliderTheme ??= const SliderThemeData();
     snackBarTheme ??= const SnackBarThemeData();
     switchTheme ??= const SwitchThemeData();
-    tabBarTheme ??= const TabBarTheme();
+    tabBarTheme ??= const TabBarThemeData();
     textButtonTheme ??= const TextButtonThemeData();
     textSelectionTheme ??= const TextSelectionThemeData();
     timePickerTheme ??= const TimePickerThemeData();
     toggleButtonsTheme ??= const ToggleButtonsThemeData();
     tooltipTheme ??= const TooltipThemeData();
-    expansionTileTheme ??= const ExpansionTileThemeData();
-
     // DEPRECATED (newest deprecations at the bottom)
-    accentTextTheme = defaultAccentTextTheme.merge(accentTextTheme);
-    accentIconTheme ??= accentIsDark ? const IconThemeData(color: Colors.white) : const IconThemeData(color: Colors.black);
-    buttonColor ??= isDark ? primarySwatch[600]! : Colors.grey[300]!;
-    fixTextFieldOutlineLabel ??= true;
-    primaryColorBrightness = estimatedPrimaryColorBrightness;
-    errorColor ??= Colors.red[700]!;
-    backgroundColor ??= isDark ? Colors.grey[700]! : primarySwatch[200]!;
-    bottomAppBarColor ??= colorSchemeSeed != null ? colorScheme.surface : isDark ? Colors.grey[800]! : Colors.white;
-
+    buttonBarTheme ??= const ButtonBarThemeData();
+    dialogBackgroundColor ??= isDark ? Colors.grey[800]! : Colors.white;
+    indicatorColor ??= colorScheme.secondary == primaryColor ? Colors.white : colorScheme.secondary;
     return ThemeData.raw(
       // For the sanity of the reader, make sure these properties are in the same
       // order in every place that they are separated by section comments (e.g.
@@ -613,6 +564,7 @@ class ThemeData with Diagnosticable {
       // alphabetical by symbol name.
 
       // GENERAL CONFIGURATION
+      adaptationMap: _createAdaptationMap(adaptations),
       applyElevationOverlayColor: applyElevationOverlayColor,
       cupertinoOverrideTheme: cupertinoOverrideTheme,
       extensions: _themeExtensionIterableToMap(extensions),
@@ -628,14 +580,12 @@ class ThemeData with Diagnosticable {
       canvasColor: canvasColor,
       cardColor: cardColor,
       colorScheme: colorScheme,
-      dialogBackgroundColor: dialogBackgroundColor,
       disabledColor: disabledColor,
       dividerColor: dividerColor,
       focusColor: focusColor,
       highlightColor: highlightColor,
       hintColor: hintColor,
       hoverColor: hoverColor,
-      indicatorColor: indicatorColor,
       primaryColor: primaryColor,
       primaryColorDark: primaryColorDark,
       primaryColorLight: primaryColorLight,
@@ -651,32 +601,42 @@ class ThemeData with Diagnosticable {
       typography: typography,
       primaryIconTheme: primaryIconTheme,
       // COMPONENT THEMES
+      actionIconTheme: actionIconTheme,
       appBarTheme: appBarTheme,
+      badgeTheme: badgeTheme,
       bannerTheme: bannerTheme,
       bottomAppBarTheme: bottomAppBarTheme,
       bottomNavigationBarTheme: bottomNavigationBarTheme,
       bottomSheetTheme: bottomSheetTheme,
-      buttonBarTheme: buttonBarTheme,
       buttonTheme: buttonTheme,
       cardTheme: cardTheme,
       checkboxTheme: checkboxTheme,
       chipTheme: chipTheme,
       dataTableTheme: dataTableTheme,
+      datePickerTheme: datePickerTheme,
       dialogTheme: dialogTheme,
       dividerTheme: dividerTheme,
       drawerTheme: drawerTheme,
+      dropdownMenuTheme: dropdownMenuTheme,
       elevatedButtonTheme: elevatedButtonTheme,
       expansionTileTheme: expansionTileTheme,
       filledButtonTheme: filledButtonTheme,
       floatingActionButtonTheme: floatingActionButtonTheme,
       iconButtonTheme: iconButtonTheme,
       listTileTheme: listTileTheme,
+      menuBarTheme: menuBarTheme,
+      menuButtonTheme: menuButtonTheme,
+      menuTheme: menuTheme,
       navigationBarTheme: navigationBarTheme,
+      navigationDrawerTheme: navigationDrawerTheme,
       navigationRailTheme: navigationRailTheme,
       outlinedButtonTheme: outlinedButtonTheme,
       popupMenuTheme: popupMenuTheme,
       progressIndicatorTheme: progressIndicatorTheme,
       radioTheme: radioTheme,
+      searchBarTheme: searchBarTheme,
+      searchViewTheme: searchViewTheme,
+      segmentedButtonTheme: segmentedButtonTheme,
       sliderTheme: sliderTheme,
       snackBarTheme: snackBarTheme,
       switchTheme: switchTheme,
@@ -687,19 +647,9 @@ class ThemeData with Diagnosticable {
       toggleButtonsTheme: toggleButtonsTheme,
       tooltipTheme: tooltipTheme,
       // DEPRECATED (newest deprecations at the bottom)
-      accentColor: accentColor,
-      accentColorBrightness: accentColorBrightness,
-      accentTextTheme: accentTextTheme,
-      accentIconTheme: accentIconTheme,
-      buttonColor: buttonColor,
-      fixTextFieldOutlineLabel: fixTextFieldOutlineLabel,
-      primaryColorBrightness: primaryColorBrightness,
-      androidOverscrollIndicator: androidOverscrollIndicator,
-      toggleableActiveColor: toggleableActiveColor,
-      selectedRowColor: selectedRowColor,
-      errorColor: errorColor,
-      backgroundColor: backgroundColor,
-      bottomAppBarColor: bottomAppBarColor,
+      buttonBarTheme: buttonBarTheme,
+      dialogBackgroundColor: dialogBackgroundColor,
+      indicatorColor: indicatorColor,
     );
   }
 
@@ -717,6 +667,7 @@ class ThemeData with Diagnosticable {
     // alphabetical by symbol name.
 
     // GENERAL CONFIGURATION
+    required this.adaptationMap,
     required this.applyElevationOverlayColor,
     required this.cupertinoOverrideTheme,
     required this.extensions,
@@ -729,20 +680,18 @@ class ThemeData with Diagnosticable {
     required this.useMaterial3,
     required this.visualDensity,
     // COLOR
-    // [colorScheme] is the preferred way to configure colors. The other color
-    // properties will gradually be phased out, see
+    required this.colorScheme,
+    // [colorScheme] is the preferred way to configure colors. The [Color] properties
+    // listed below (as well as primarySwatch) will gradually be phased out, see
     // https://github.com/flutter/flutter/issues/91772.
     required this.canvasColor,
     required this.cardColor,
-    required this.colorScheme,
-    required this.dialogBackgroundColor,
     required this.disabledColor,
     required this.dividerColor,
     required this.focusColor,
     required this.highlightColor,
     required this.hintColor,
     required this.hoverColor,
-    required this.indicatorColor,
     required this.primaryColor,
     required this.primaryColorDark,
     required this.primaryColorLight,
@@ -758,32 +707,42 @@ class ThemeData with Diagnosticable {
     required this.textTheme,
     required this.typography,
     // COMPONENT THEMES
+    required this.actionIconTheme,
     required this.appBarTheme,
+    required this.badgeTheme,
     required this.bannerTheme,
     required this.bottomAppBarTheme,
     required this.bottomNavigationBarTheme,
     required this.bottomSheetTheme,
-    required this.buttonBarTheme,
     required this.buttonTheme,
     required this.cardTheme,
     required this.checkboxTheme,
     required this.chipTheme,
     required this.dataTableTheme,
+    required this.datePickerTheme,
     required this.dialogTheme,
     required this.dividerTheme,
     required this.drawerTheme,
+    required this.dropdownMenuTheme,
     required this.elevatedButtonTheme,
     required this.expansionTileTheme,
     required this.filledButtonTheme,
     required this.floatingActionButtonTheme,
     required this.iconButtonTheme,
     required this.listTileTheme,
+    required this.menuBarTheme,
+    required this.menuButtonTheme,
+    required this.menuTheme,
     required this.navigationBarTheme,
+    required this.navigationDrawerTheme,
     required this.navigationRailTheme,
     required this.outlinedButtonTheme,
     required this.popupMenuTheme,
     required this.progressIndicatorTheme,
     required this.radioTheme,
+    required this.searchBarTheme,
+    required this.searchViewTheme,
+    required this.segmentedButtonTheme,
     required this.sliderTheme,
     required this.snackBarTheme,
     required this.switchTheme,
@@ -795,184 +754,27 @@ class ThemeData with Diagnosticable {
     required this.tooltipTheme,
     // DEPRECATED (newest deprecations at the bottom)
     @Deprecated(
-      'Use colorScheme.secondary instead. '
-      'For more information, consult the migration guide at '
-      'https://flutter.dev/docs/release/breaking-changes/theme-data-accent-properties#migration-guide. '
-      'This feature was deprecated after v2.3.0-0.1.pre.',
+      'Use OverflowBar instead. '
+      'This feature was deprecated after v3.21.0-10.0.pre.',
     )
-    Color? accentColor,
+    ButtonBarThemeData? buttonBarTheme,
     @Deprecated(
-      'No longer used by the framework, please remove any reference to it. '
-      'For more information, consult the migration guide at '
-      'https://flutter.dev/docs/release/breaking-changes/theme-data-accent-properties#migration-guide. '
-      'This feature was deprecated after v2.3.0-0.1.pre.',
+      'Use DialogThemeData.backgroundColor instead. '
+      'This feature was deprecated after v3.27.0-0.1.pre.',
     )
-    Brightness? accentColorBrightness,
+    required this.dialogBackgroundColor,
     @Deprecated(
-      'No longer used by the framework, please remove any reference to it. '
-      'For more information, consult the migration guide at '
-      'https://flutter.dev/docs/release/breaking-changes/theme-data-accent-properties#migration-guide. '
-      'This feature was deprecated after v2.3.0-0.1.pre.',
+      'Use TabBarThemeData.indicatorColor instead. '
+      'This feature was deprecated after v3.28.0-1.0.pre.',
     )
-    TextTheme? accentTextTheme,
-    @Deprecated(
-      'No longer used by the framework, please remove any reference to it. '
-      'For more information, consult the migration guide at '
-      'https://flutter.dev/docs/release/breaking-changes/theme-data-accent-properties#migration-guide. '
-      'This feature was deprecated after v2.3.0-0.1.pre.',
-    )
-    IconThemeData? accentIconTheme,
-    @Deprecated(
-      'No longer used by the framework, please remove any reference to it. '
-      'This feature was deprecated after v2.3.0-0.2.pre.',
-    )
-    Color? buttonColor,
-    @Deprecated(
-      'This "fix" is now enabled by default. '
-      'This feature was deprecated after v2.5.0-1.0.pre.',
-    )
-    bool? fixTextFieldOutlineLabel,
-    @Deprecated(
-      'No longer used by the framework, please remove any reference to it. '
-      'This feature was deprecated after v2.6.0-11.0.pre.',
-    )
-    Brightness? primaryColorBrightness,
-    @Deprecated(
-      'Use ThemeData.useMaterial3 or override ScrollBehavior.buildOverscrollIndicator. '
-      'This feature was deprecated after v2.13.0-0.0.pre.'
-    )
-    this.androidOverscrollIndicator,
-    @Deprecated(
-      'No longer used by the framework, please remove any reference to it. '
-      'For more information, consult the migration guide at '
-      'https://flutter.dev/docs/release/breaking-changes/toggleable-active-color#migration-guide. '
-      'This feature was deprecated after v2.13.0-0.4.pre.',
-    )
-    Color? toggleableActiveColor,
-    @Deprecated(
-      'No longer used by the framework, please remove any reference to it. '
-      'This feature was deprecated after v3.1.0-0.0.pre.',
-    )
-    Color? selectedRowColor,
-    @Deprecated(
-      'Use colorScheme.error instead. '
-      'This feature was deprecated after v3.3.0-0.5.pre.',
-    )
-    Color? errorColor,
-    @Deprecated(
-      'Use colorScheme.background instead. '
-      'This feature was deprecated after v3.3.0-0.5.pre.',
-    )
-    Color? backgroundColor,
-    @Deprecated(
-      'Use BottomAppBarTheme.color instead. '
-      'This feature was deprecated after v3.3.0-0.6.pre.',
-    )
-    Color? bottomAppBarColor,
-
+    required this.indicatorColor,
   }) : // DEPRECATED (newest deprecations at the bottom)
        // should not be `required`, use getter pattern to avoid breakages.
-       _accentColor = accentColor,
-       _accentColorBrightness = accentColorBrightness,
-       _accentTextTheme = accentTextTheme,
-       _accentIconTheme = accentIconTheme,
-       _buttonColor = buttonColor,
-       _fixTextFieldOutlineLabel = fixTextFieldOutlineLabel,
-       _primaryColorBrightness = primaryColorBrightness,
-       _toggleableActiveColor = toggleableActiveColor,
-       _selectedRowColor = selectedRowColor,
-       _errorColor = errorColor,
-       _backgroundColor = backgroundColor,
-       _bottomAppBarColor = bottomAppBarColor,
-       // GENERAL CONFIGURATION
-       assert(applyElevationOverlayColor != null),
-       assert(extensions != null),
-       assert(inputDecorationTheme != null),
-       assert(materialTapTargetSize != null),
-       assert(pageTransitionsTheme != null),
-       assert(platform != null),
-       assert(scrollbarTheme != null),
-       assert(splashFactory != null),
-       assert(useMaterial3 != null),
-       assert(visualDensity != null),
-        // COLOR
-       assert(canvasColor != null),
-       assert(cardColor != null),
-       assert(colorScheme != null),
-       assert(dialogBackgroundColor != null),
-       assert(disabledColor != null),
-       assert(dividerColor != null),
-       assert(focusColor != null),
-       assert(highlightColor != null),
-       assert(hintColor != null),
-       assert(hoverColor != null),
-       assert(indicatorColor != null),
-       assert(primaryColor != null),
-       assert(primaryColorDark != null),
-       assert(primaryColorLight != null),
-       assert(scaffoldBackgroundColor != null),
-       assert(secondaryHeaderColor != null),
-       assert(shadowColor != null),
-       assert(splashColor != null),
-       assert(toggleableActiveColor != null),
-       assert(unselectedWidgetColor != null),
-        // TYPOGRAPHY & ICONOGRAPHY
-       assert(iconTheme != null),
-       assert(primaryIconTheme != null),
-       assert(primaryTextTheme != null),
-       assert(textTheme != null),
-       assert(typography != null),
-        // COMPONENT THEMES
-       assert(appBarTheme != null),
-       assert(bannerTheme != null),
-       assert(bottomAppBarTheme != null),
-       assert(bottomNavigationBarTheme != null),
-       assert(bottomSheetTheme != null),
-       assert(buttonBarTheme != null),
-       assert(buttonTheme != null),
-       assert(cardTheme != null),
-       assert(checkboxTheme != null),
-       assert(chipTheme != null),
-       assert(dataTableTheme != null),
-       assert(dialogTheme != null),
-       assert(dividerTheme != null),
-       assert(drawerTheme != null),
-       assert(elevatedButtonTheme != null),
-       assert(expansionTileTheme != null),
-       assert(filledButtonTheme != null),
-       assert(floatingActionButtonTheme != null),
-       assert(iconButtonTheme != null),
-       assert(listTileTheme != null),
-       assert(navigationBarTheme != null),
-       assert(navigationRailTheme != null),
-       assert(outlinedButtonTheme != null),
-       assert(popupMenuTheme != null),
-       assert(progressIndicatorTheme != null),
-       assert(radioTheme != null),
-       assert(sliderTheme != null),
-       assert(snackBarTheme != null),
-       assert(switchTheme != null),
-       assert(tabBarTheme != null),
-       assert(textButtonTheme != null),
-       assert(textSelectionTheme != null),
-       assert(timePickerTheme != null),
-       assert(toggleButtonsTheme != null),
-       assert(tooltipTheme != null),
-        // DEPRECATED (newest deprecations at the bottom)
-       assert(accentColor != null),
-       assert(accentColorBrightness != null),
-       assert(accentTextTheme != null),
-       assert(accentIconTheme != null),
-       assert(buttonColor != null),
-       assert(fixTextFieldOutlineLabel != null),
-       assert(primaryColorBrightness != null),
-       assert(errorColor != null),
-       assert(backgroundColor != null);
+       _buttonBarTheme = buttonBarTheme,
+       assert(buttonBarTheme != null);
 
   /// Create a [ThemeData] based on the colors in the given [colorScheme] and
   /// text styles of the optional [textTheme].
-  ///
-  /// The [colorScheme] can not be null.
   ///
   /// If [colorScheme].brightness is [Brightness.dark] then
   /// [ThemeData.applyElevationOverlayColor] will be set to true to support
@@ -1012,41 +814,31 @@ class ThemeData with Diagnosticable {
       colorScheme: colorScheme,
       brightness: colorScheme.brightness,
       primaryColor: primarySurfaceColor,
-      primaryColorBrightness: ThemeData.estimateBrightnessForColor(primarySurfaceColor),
-      canvasColor: colorScheme.background,
-      accentColor: colorScheme.secondary,
-      accentColorBrightness: ThemeData.estimateBrightnessForColor(colorScheme.secondary),
-      scaffoldBackgroundColor: colorScheme.background,
-      bottomAppBarColor: colorScheme.surface,
+      canvasColor: colorScheme.surface,
+      scaffoldBackgroundColor: colorScheme.surface,
       cardColor: colorScheme.surface,
       dividerColor: colorScheme.onSurface.withOpacity(0.12),
-      backgroundColor: colorScheme.background,
-      dialogBackgroundColor: colorScheme.background,
+      dialogBackgroundColor: colorScheme.surface,
       indicatorColor: onPrimarySurfaceColor,
-      errorColor: colorScheme.error,
       textTheme: textTheme,
       applyElevationOverlayColor: isDark,
       useMaterial3: useMaterial3,
     );
   }
 
-  /// A default light blue theme.
+  /// A default light theme.
   ///
   /// This theme does not contain text geometry. Instead, it is expected that
   /// this theme is localized using text geometry using [ThemeData.localize].
-  factory ThemeData.light({bool? useMaterial3}) => ThemeData(
-    brightness: Brightness.light,
-    useMaterial3: useMaterial3,
-  );
+  factory ThemeData.light({bool? useMaterial3}) =>
+      ThemeData(brightness: Brightness.light, useMaterial3: useMaterial3);
 
-  /// A default dark theme with a teal secondary [ColorScheme] color.
+  /// A default dark theme.
   ///
   /// This theme does not contain text geometry. Instead, it is expected that
   /// this theme is localized using text geometry using [ThemeData.localize].
-  factory ThemeData.dark({bool? useMaterial3}) => ThemeData(
-    brightness: Brightness.dark,
-    useMaterial3: useMaterial3,
-  );
+  factory ThemeData.dark({bool? useMaterial3}) =>
+      ThemeData(brightness: Brightness.dark, useMaterial3: useMaterial3);
 
   /// The default color theme. Same as [ThemeData.light].
   ///
@@ -1058,6 +850,20 @@ class ThemeData with Diagnosticable {
   /// Most applications would use [Theme.of], which provides correct localized
   /// text geometry.
   factory ThemeData.fallback({bool? useMaterial3}) => ThemeData.light(useMaterial3: useMaterial3);
+
+  /// Used to obtain a particular [Adaptation] from [adaptationMap].
+  ///
+  /// To get an adaptation, use `Theme.of(context).getAdaptation<MyAdaptation>()`.
+  Adaptation<T>? getAdaptation<T>() => adaptationMap[T] as Adaptation<T>?;
+
+  static Map<Type, Adaptation<Object>> _createAdaptationMap(
+    Iterable<Adaptation<Object>> adaptations,
+  ) {
+    final Map<Type, Adaptation<Object>> adaptationMap = <Type, Adaptation<Object>>{
+      for (final Adaptation<Object> adaptation in adaptations) adaptation.type: adaptation,
+    };
+    return adaptationMap;
+  }
 
   /// The overall theme brightness.
   ///
@@ -1148,6 +954,12 @@ class ThemeData with Diagnosticable {
   /// See [extensions] for an interactive example.
   T? extension<T>() => extensions[T] as T?;
 
+  /// A map which contains the adaptations for the theme. The entry's key is the
+  /// type of the adaptation; the value is the adaptation itself.
+  ///
+  /// To obtain an adaptation, use [getAdaptation].
+  final Map<Type, Adaptation<Object>> adaptationMap;
+
   /// The default [InputDecoration] values for [InputDecorator], [TextField],
   /// and [TextFormField] are based on this theme.
   ///
@@ -1178,7 +990,7 @@ class ThemeData with Diagnosticable {
   /// to determine the current platform for the purpose of emulating the
   /// platform behavior (e.g. scrolling or haptic effects). Widgets and render
   /// objects at lower layers that try to emulate the underlying platform
-  /// platform can depend on [defaultTargetPlatform] directly, or may require
+  /// can depend on [defaultTargetPlatform] directly, or may require
   /// that the target platform be provided as an argument. The
   /// [dart:io.Platform] object should only be used directly when it's critical
   /// to actually know the current platform, without any overrides possible (for
@@ -1210,64 +1022,81 @@ class ThemeData with Diagnosticable {
   ///    splash with sparkle effects.
   final InteractiveInkFeatureFactory splashFactory;
 
-  /// A temporary flag used to opt-in to Material 3 features.
+  /// A temporary flag that can be used to opt-out of Material 3 features.
   ///
-  /// If true, then widgets that have been migrated to Material 3 will
-  /// use new colors, typography and other features of Material 3.
-  /// If false, they will use the Material 2 look and feel.
+  /// This flag is _true_ by default. If false, then components will
+  /// continue to use the colors, typography and other features of
+  /// Material 2.
   ///
-  /// During the migration to Material 3, turning this on may yield
-  /// inconsistent look and feel in your app as some widgets are migrated
-  /// while others have yet to be.
-  ///
-  /// Defaults to false. When the Material 3 specification is complete
-  /// and all widgets are migrated on stable, we will change this flag to be
-  /// true by default. After that change has landed on stable, we will deprecate
-  /// this flag and remove all uses of it. At that point, the `material` library
-  /// will aim to only support Material 3.
+  /// In the long run this flag will be deprecated and eventually
+  /// only Material 3 will be supported. We recommend that applications
+  /// migrate to Material 3 as soon as that's practical. Until that migration
+  /// is complete, this flag can be set to false.
   ///
   /// ## Defaults
-  /// If a [ThemeData] is constructed with [useMaterial3] set to true, then
-  /// some properties will get updated defaults. Please note that
-  /// [ThemeData.copyWith] with [useMaterial3] set to true will
-  /// not change any of these properties in the resulting [ThemeData].
+  ///
+  /// If a [ThemeData] is _constructed_ with [useMaterial3] set to true, then
+  /// some properties will get updated defaults. However, the
+  /// [ThemeData.copyWith] method with [useMaterial3] set to true will _not_
+  /// change any of these properties in the resulting [ThemeData].
   ///
   /// <style>table,td,th { border-collapse: collapse; padding: 0.45em; } td { border: 1px solid }</style>
   ///
-  /// | Property        | Material 3 default           | Material 2 default        |
-  /// | :-------------- | :--------------------------- | :------------------------ |
-  /// | [typography]    | [Typography.material2021]    | [Typography.material2014] |
-  /// | [splashFactory] | [InkSparkle]* or [InkRipple] | [InkSplash]               |
+  /// | Property        | Material 3 default             | Material 2 default             |
+  /// | :-------------- | :----------------------------- | :----------------------------- |
+  /// | [colorScheme]   | M3 baseline light color scheme | M2 baseline light color scheme |
+  /// | [typography]    | [Typography.material2021]      | [Typography.material2014]      |
+  /// | [splashFactory] | [InkSparkle]* or [InkRipple]   | [InkSplash]                    |
   ///
   /// \* if the target platform is Android and the app is not
   /// running on the web, otherwise it will fallback to [InkRipple].
+  ///
+  /// If [brightness] is [Brightness.dark] then the default color scheme will
+  /// be either the M3 baseline dark color scheme or the M2 baseline dark color
+  /// scheme depending on [useMaterial3].
   ///
   /// ## Affected widgets
   ///
   /// This flag affects styles and components.
   ///
   /// ### Styles
-  ///   * Color: [ColorScheme], [Material]
+  ///   * Color: [ColorScheme], [Material] (see table above)
   ///   * Shape: (see components below)
-  ///   * Typography: `typography` (see table above)
+  ///   * Typography: [Typography] (see table above)
   ///
   /// ### Components
-  ///   * Common buttons: [ElevatedButton], [FilledButton], [OutlinedButton], [TextButton], [IconButton]
-  ///   * FAB: [FloatingActionButton]
-  ///   * Extended FAB: [FloatingActionButton.extended]
+  ///   * Badges: [Badge]
+  ///   * Bottom app bar: [BottomAppBar]
+  ///   * Bottom sheets: [BottomSheet]
+  ///   * Buttons
+  ///     - Common buttons: [ElevatedButton], [FilledButton], [FilledButton.tonal], [OutlinedButton], [TextButton]
+  ///     - FAB: [FloatingActionButton], [FloatingActionButton.extended]
+  ///     - Icon buttons: [IconButton], [IconButton.filled] (*new*), [IconButton.filledTonal], [IconButton.outlined]
+  ///     - Segmented buttons: [SegmentedButton] (replacing [ToggleButtons])
   ///   * Cards: [Card]
-  ///   * TextFields: [TextField] together with its [InputDecoration]
+  ///   * Checkbox: [Checkbox], [CheckboxListTile]
   ///   * Chips:
   ///     - [ActionChip] (used for Assist and Suggestion chips),
   ///     - [FilterChip], [ChoiceChip] (used for single selection filter chips),
   ///     - [InputChip]
-  ///   * Checkbox: [Checkbox]
-  ///   * Dialogs: [Dialog], [AlertDialog]
+  ///   * Date pickers: [showDatePicker], [showDateRangePicker], [DatePickerDialog], [DateRangePickerDialog], [InputDatePickerFormField]
+  ///   * Dialogs: [AlertDialog], [Dialog.fullscreen]
+  ///   * Divider: [Divider], [VerticalDivider]
   ///   * Lists: [ListTile]
-  ///   * Navigation bar: [NavigationBar] (new, replacing [BottomNavigationBar])
-  ///   * [Navigation rail](https://m3.material.io/components/navigation-rail): [NavigationRail]
-  ///   * Switch: [Switch]
-  ///   * Top app bar: [AppBar]
+  ///   * Menus: [MenuAnchor], [DropdownMenu], [MenuBar]
+  ///   * Navigation bar: [NavigationBar] (replacing [BottomNavigationBar])
+  ///   * Navigation drawer: [NavigationDrawer] (replacing [Drawer])
+  ///   * Navigation rail: [NavigationRail]
+  ///   * Progress indicators: [CircularProgressIndicator], [LinearProgressIndicator]
+  ///   * Radio button: [Radio], [RadioListTile]
+  ///   * Search: [SearchBar], [SearchAnchor],
+  ///   * Snack bar: [SnackBar]
+  ///   * Slider: [Slider], [RangeSlider]
+  ///   * Switch: [Switch], [SwitchListTile]
+  ///   * Tabs: [TabBar], [TabBar.secondary]
+  ///   * TextFields: [TextField] together with its [InputDecoration]
+  ///   * Time pickers: [showTimePicker], [TimePickerDialog]
+  ///   * Top app bar: [AppBar], [SliverAppBar], [SliverAppBar.medium], [SliverAppBar.large]
   ///
   /// In addition, this flag enables features introduced in Android 12.
   ///   * Stretch overscroll: [MaterialScrollBehavior]
@@ -1305,22 +1134,18 @@ class ThemeData with Diagnosticable {
   /// A larger value translates to a spacing increase (less dense), and a
   /// smaller value translates to a spacing decrease (more dense).
   ///
-  /// In Material Design 3, the [visualDensity] does not override the value of
-  /// [IconButton.visualDensity] which defaults to [VisualDensity.standard]
-  /// for all platforms. To override the default value of [IconButton.visualDensity],
-  /// use [ThemeData.iconButtonTheme] instead.
+  /// In Material Design 3, the [visualDensity] does not override the default
+  /// visual for the following components which are set to [VisualDensity.standard]
+  /// for all platforms:
+  ///
+  ///  * [IconButton] - To override the default value of [IconButton.visualDensity],
+  ///    use [ThemeData.iconButtonTheme] instead.
+  ///  * [Checkbox] - To override the default value of [Checkbox.visualDensity],
+  ///    use [ThemeData.checkboxTheme] instead.
   /// {@endtemplate}
   final VisualDensity visualDensity;
 
   // COLOR
-
-  /// The default color of the [BottomAppBar].
-    @Deprecated(
-      'Use BottomAppBarTheme.color instead. '
-      'This feature was deprecated after v3.3.0-0.6.pre.',
-    )
-  Color get bottomAppBarColor => _bottomAppBarColor!;
-  final Color? _bottomAppBarColor;
 
   /// The default color of [MaterialType.canvas] [Material].
   final Color canvasColor;
@@ -1328,18 +1153,14 @@ class ThemeData with Diagnosticable {
   /// The color of [Material] when it is used as a [Card].
   final Color cardColor;
 
-  /// A set of twelve colors that can be used to configure the
-  /// color properties of most components.
+  /// {@macro flutter.material.color_scheme.ColorScheme}
   ///
-  /// This property was added much later than the theme's set of highly
-  /// specific colors, like [cardColor], [buttonColor], [canvasColor] etc.
-  /// New components can be defined exclusively in terms of [colorScheme].
-  /// Existing components will gradually migrate to it, to the extent
-  /// that is possible without significant backwards compatibility breaks.
+  /// This property was added much later than the theme's set of highly specific
+  /// colors, like [cardColor], [canvasColor] etc. New components can be defined
+  /// exclusively in terms of [colorScheme]. Existing components will gradually
+  /// migrate to it, to the extent that is possible without significant
+  /// backwards compatibility breaks.
   final ColorScheme colorScheme;
-
-  /// The background color of [Dialog] elements.
-  final Color dialogBackgroundColor;
 
   /// The color used for widgets that are inoperative, regardless of
   /// their state. For example, a disabled checkbox (which may be
@@ -1368,9 +1189,6 @@ class ThemeData with Diagnosticable {
   /// component.
   final Color hoverColor;
 
-  /// The color of the selected tab indicator in a tab bar.
-  final Color indicatorColor;
-
   /// The background color for major parts of the app (toolbars, tab bars, etc)
   ///
   /// The theme's [colorScheme] property contains [ColorScheme.primary], as
@@ -1395,14 +1213,6 @@ class ThemeData with Diagnosticable {
   // ...this should be the "50-value of secondary app color".
   final Color secondaryHeaderColor;
 
-  /// The color used to highlight selected rows.
-  @Deprecated(
-    'No longer used by the framework, please remove any reference to it. '
-    'This feature was deprecated after v3.1.0-0.0.pre.',
-  )
-  Color get selectedRowColor => _selectedRowColor!;
-  final Color? _selectedRowColor;
-
   /// The color that the [Material] widget uses to draw elevation shadows.
   ///
   /// Defaults to fully opaque black.
@@ -1419,11 +1229,6 @@ class ThemeData with Diagnosticable {
   /// See also:
   ///  * [splashFactory], which defines the appearance of the splash.
   final Color splashColor;
-
-  /// The color used to highlight the active states of toggleable widgets like
-  /// [Switch], [Radio], and [Checkbox].
-  Color get toggleableActiveColor => _toggleableActiveColor!;
-  final Color? _toggleableActiveColor;
 
   /// The color used for widgets in their inactive (but enabled)
   /// state. For example, an unchecked checkbox. See also [disabledColor].
@@ -1450,9 +1255,16 @@ class ThemeData with Diagnosticable {
 
   // COMPONENT THEMES
 
+  /// A theme for customizing icons of [BackButtonIcon], [CloseButtonIcon],
+  /// [DrawerButtonIcon], or [EndDrawerButtonIcon].
+  final ActionIconThemeData? actionIconTheme;
+
   /// A theme for customizing the color, elevation, brightness, iconTheme and
   /// textTheme of [AppBar]s.
   final AppBarTheme appBarTheme;
+
+  /// A theme for customizing the color of [Badge]s.
+  final BadgeThemeData badgeTheme;
 
   /// A theme for customizing the color and text style of a [MaterialBanner].
   final MaterialBannerThemeData bannerTheme;
@@ -1467,9 +1279,6 @@ class ThemeData with Diagnosticable {
   /// A theme for customizing the color, elevation, and shape of a bottom sheet.
   final BottomSheetThemeData bottomSheetTheme;
 
-  /// A theme for customizing the appearance and layout of [ButtonBar] widgets.
-  final ButtonBarThemeData buttonBarTheme;
-
   /// Defines the default configuration of button widgets, like [DropdownButton]
   /// and [ButtonBar].
   final ButtonThemeData buttonTheme;
@@ -1477,7 +1286,7 @@ class ThemeData with Diagnosticable {
   /// The colors and styles used to render [Card].
   ///
   /// This is the value returned from [CardTheme.of].
-  final CardTheme cardTheme;
+  final CardThemeData cardTheme;
 
   /// A theme for customizing the appearance and layout of [Checkbox] widgets.
   final CheckboxThemeData checkboxTheme;
@@ -1491,8 +1300,12 @@ class ThemeData with Diagnosticable {
   /// widgets.
   final DataTableThemeData dataTableTheme;
 
+  /// A theme for customizing the appearance and layout of [DatePickerDialog]
+  /// widgets.
+  final DatePickerThemeData datePickerTheme;
+
   /// A theme for customizing the shape of a dialog.
-  final DialogTheme dialogTheme;
+  final DialogThemeData dialogTheme;
 
   /// A theme for customizing the color, thickness, and indents of [Divider]s,
   /// [VerticalDivider]s, etc.
@@ -1500,6 +1313,9 @@ class ThemeData with Diagnosticable {
 
   /// A theme for customizing the appearance and layout of [Drawer] widgets.
   final DrawerThemeData drawerTheme;
+
+  /// A theme for customizing the appearance and layout of [DropdownMenu] widgets.
+  final DropdownMenuThemeData dropdownMenuTheme;
 
   /// A theme for customizing the appearance and internal layout of
   /// [ElevatedButton]s.
@@ -1523,9 +1339,25 @@ class ThemeData with Diagnosticable {
   /// A theme for customizing the appearance of [ListTile] widgets.
   final ListTileThemeData listTileTheme;
 
+  /// A theme for customizing the color, shape, elevation, and other [MenuStyle]
+  /// aspects of the menu bar created by the [MenuBar] widget.
+  final MenuBarThemeData menuBarTheme;
+
+  /// A theme for customizing the color, shape, elevation, and text style of
+  /// cascading menu buttons created by [SubmenuButton] or [MenuItemButton].
+  final MenuButtonThemeData menuButtonTheme;
+
+  /// A theme for customizing the color, shape, elevation, and other [MenuStyle]
+  /// attributes of menus created by the [SubmenuButton] widget.
+  final MenuThemeData menuTheme;
+
   /// A theme for customizing the background color, text style, and icon themes
   /// of a [NavigationBar].
   final NavigationBarThemeData navigationBarTheme;
+
+  /// A theme for customizing the background color, text style, and icon themes
+  /// of a [NavigationDrawer].
+  final NavigationDrawerThemeData navigationDrawerTheme;
 
   /// A theme for customizing the background color, elevation, text style, and
   /// icon themes of a [NavigationRail].
@@ -1545,6 +1377,15 @@ class ThemeData with Diagnosticable {
   /// A theme for customizing the appearance and layout of [Radio] widgets.
   final RadioThemeData radioTheme;
 
+  /// A theme for customizing the appearance and layout of [SearchBar] widgets.
+  final SearchBarThemeData searchBarTheme;
+
+  /// A theme for customizing the appearance and layout of search views created by [SearchAnchor] widgets.
+  final SearchViewThemeData searchViewTheme;
+
+  /// A theme for customizing the appearance and layout of [SegmentedButton] widgets.
+  final SegmentedButtonThemeData segmentedButtonTheme;
+
   /// The colors and shapes used to render [Slider].
   ///
   /// This is the value returned from [SliderTheme.of].
@@ -1557,7 +1398,7 @@ class ThemeData with Diagnosticable {
   final SwitchThemeData switchTheme;
 
   /// A theme for customizing the size, shape, and color of the tab bar indicator.
-  final TabBarTheme tabBarTheme;
+  final TabBarThemeData tabBarTheme;
 
   /// A theme for customizing the appearance and internal layout of
   /// [TextButton]s.
@@ -1577,162 +1418,27 @@ class ThemeData with Diagnosticable {
   /// This is the value returned from [TooltipTheme.of].
   final TooltipThemeData tooltipTheme;
 
-  // DEPRECATED (newest deprecations at the bottom)
-
-  /// Obsolete property that was originally used as the foreground
-  /// color for widgets (knobs, text, overscroll edge effect, etc).
-  ///
-  /// The material library no longer uses this property. In most cases
-  /// the theme's [colorScheme] [ColorScheme.secondary] property is now
-  /// used instead.
-  ///
-  /// Apps should migrate uses of this property to the theme's [colorScheme]
-  /// [ColorScheme.secondary] color. In cases where a color is needed that
-  /// that contrasts well with the secondary color [ColorScheme.onSecondary]
-  /// can be used.
+  /// A theme for customizing the appearance and layout of [ButtonBar] widgets.
   @Deprecated(
-    'Use colorScheme.secondary instead. '
-    'For more information, consult the migration guide at '
-    'https://flutter.dev/docs/release/breaking-changes/theme-data-accent-properties#migration-guide. '
-    'This feature was deprecated after v2.3.0-0.1.pre.',
+    'Use OverflowBar instead. '
+    'This feature was deprecated after v3.21.0-10.0.pre.',
   )
-  Color get accentColor => _accentColor!;
-  final Color? _accentColor;
+  ButtonBarThemeData get buttonBarTheme => _buttonBarTheme!;
+  final ButtonBarThemeData? _buttonBarTheme;
 
-  /// Obsolete property that was originally used to determine the color
-  /// of text and icons placed on top of the accent color (e.g. the
-  /// icons on a floating action button).
-  ///
-  /// The material library no longer uses this property. The
-  /// [floatingActionButtonTheme] can be used to configure
-  /// the appearance of [FloatingActionButton]s. The brightness
-  /// of any color can be found with [ThemeData.estimateBrightnessForColor].
+  /// The background color of [Dialog] elements.
   @Deprecated(
-    'No longer used by the framework, please remove any reference to it. '
-    'For more information, consult the migration guide at '
-    'https://flutter.dev/docs/release/breaking-changes/theme-data-accent-properties#migration-guide. '
-    'This feature was deprecated after v2.3.0-0.1.pre.',
+    'Use DialogThemeData.backgroundColor instead. '
+    'This feature was deprecated after v3.27.0-0.1.pre.',
   )
-  Brightness get accentColorBrightness => _accentColorBrightness!;
-  final Brightness? _accentColorBrightness;
+  final Color dialogBackgroundColor;
 
-  /// Obsolete property that was originally used when a [TextTheme]
-  /// that contrasted well with the [accentColor] was needed.
-  ///
-  /// The material library no longer uses this property and most uses
-  /// of [accentColor] have been replaced with
-  /// the theme's [colorScheme] [ColorScheme.secondary].
-  /// You can configure the color of a [textTheme] [TextStyle] so that it
-  /// contrasts well with the [ColorScheme.secondary] like this:
-  ///
-  /// ```dart
-  /// final ThemeData theme = Theme.of(context);
-  /// final TextStyle style = theme.textTheme.displayLarge!.copyWith(
-  ///   color: theme.colorScheme.onSecondary,
-  /// );
-  /// // ...use style...
-  /// ```
+  /// The color of the selected tab indicator in a tab bar.
   @Deprecated(
-    'No longer used by the framework, please remove any reference to it. '
-    'For more information, consult the migration guide at '
-    'https://flutter.dev/docs/release/breaking-changes/theme-data-accent-properties#migration-guide. '
-    'This feature was deprecated after v2.3.0-0.1.pre.',
+    'Use TabBarThemeData.indicatorColor instead. '
+    'This feature was deprecated after v3.28.0-1.0.pre.',
   )
-  TextTheme get accentTextTheme => _accentTextTheme!;
-  final TextTheme? _accentTextTheme;
-
-  /// Obsolete property that was originally used when an [IconTheme]
-  /// that contrasted well with the [accentColor] was needed.
-  ///
-  /// The material library no longer uses this property and most uses
-  /// of [accentColor] have been replaced with
-  /// the theme's [colorScheme] [ColorScheme.secondary].
-  @Deprecated(
-    'No longer used by the framework, please remove any reference to it. '
-    'For more information, consult the migration guide at '
-    'https://flutter.dev/docs/release/breaking-changes/theme-data-accent-properties#migration-guide. '
-    'This feature was deprecated after v2.3.0-0.1.pre.',
-  )
-  IconThemeData get accentIconTheme => _accentIconTheme!;
-  final IconThemeData? _accentIconTheme;
-
-  /// The default fill color of the [Material].
-  @Deprecated(
-    'No longer used by the framework, please remove any reference to it. '
-    'This feature was deprecated after v2.3.0-0.2.pre.',
-  )
-  Color get buttonColor => _buttonColor!;
-  final Color? _buttonColor;
-
-  /// An obsolete flag to allow apps to opt-out of a
-  /// [small fix](https://github.com/flutter/flutter/issues/54028) for the Y
-  /// coordinate of the floating label in a [TextField] [OutlineInputBorder].
-  ///
-  /// Setting this flag to true causes the floating label to be more precisely
-  /// vertically centered relative to the border's outline.
-  ///
-  /// The flag is true by default and its use is deprecated.
-  @Deprecated(
-    'This "fix" is now enabled by default. '
-    'This feature was deprecated after v2.5.0-1.0.pre.',
-  )
-  bool get fixTextFieldOutlineLabel => _fixTextFieldOutlineLabel!;
-  final bool? _fixTextFieldOutlineLabel;
-
-  /// Obsolete property that was originally used to determine the color
-  /// of text and icons placed on top of the primary color (e.g. toolbar text).
-  ///
-  /// The material library no longer uses this property. The [appBarTheme] can
-  /// be used to configure the appearance of [AppBar]s. The appearance of
-  /// Keyboards for [TextField]s now uses the overall theme's
-  /// [ThemeData.brightness] and can also be customized with
-  /// [TextField.keyboardAppearance]. The brightness of any color can be found
-  /// with [ThemeData.estimateBrightnessForColor].
-  @Deprecated(
-    'No longer used by the framework, please remove any reference to it. '
-    'This feature was deprecated after v2.6.0-11.0.pre.',
-  )
-  Brightness get primaryColorBrightness => _primaryColorBrightness!;
-  final Brightness? _primaryColorBrightness;
-
-  /// Specifies which overscroll indicator to use on [TargetPlatform.android].
-  ///
-  /// When null, the default value of
-  /// [MaterialScrollBehavior.androidOverscrollIndicator] is
-  /// [AndroidOverscrollIndicator.glow].
-  ///
-  /// This property is deprecated. Use the [useMaterial3] flag instead, or
-  /// override [ScrollBehavior.buildOverscrollIndicator].
-  ///
-  /// See also:
-  ///
-  ///   * [StretchingOverscrollIndicator], a Material Design edge effect
-  ///     that transforms the contents of a scrollable when overscrolled.
-  ///   * [GlowingOverscrollIndicator], an edge effect that paints a glow
-  ///     over the contents of a scrollable when overscrolled.
-  @Deprecated(
-    'Use ThemeData.useMaterial3 or override ScrollBehavior.buildOverscrollIndicator. '
-    'This feature was deprecated after v2.13.0-0.0.pre.'
-  )
-  final AndroidOverscrollIndicator? androidOverscrollIndicator;
-
-  /// Obsolete property that was used for input validation errors, e.g. in
-  /// [TextField] fields. Use [ColorScheme.error] instead.
-  @Deprecated(
-    'Use colorScheme.error instead. '
-    'This feature was deprecated after v3.3.0-0.5.pre.',
-  )
-  Color get errorColor => _errorColor!;
-  final Color? _errorColor;
-
-  /// Obsolete property that was unused by the framework.
-  /// Use [ColorScheme.background] instead.
-  @Deprecated(
-    'Use colorScheme.background instead. '
-    'This feature was deprecated after v3.3.0-0.5.pre.',
-  )
-  Color get backgroundColor => _backgroundColor!;
-  final Color? _backgroundColor;
+  final Color indicatorColor;
 
   /// Creates a copy of this theme but with the given fields replaced with the new values.
   ///
@@ -1744,6 +1450,7 @@ class ThemeData with Diagnosticable {
     // alphabetical by symbol name.
 
     // GENERAL CONFIGURATION
+    Iterable<Adaptation<Object>>? adaptations,
     bool? applyElevationOverlayColor,
     NoDefaultCupertinoThemeData? cupertinoOverrideTheme,
     Iterable<ThemeExtension<dynamic>>? extensions,
@@ -1753,24 +1460,21 @@ class ThemeData with Diagnosticable {
     TargetPlatform? platform,
     ScrollbarThemeData? scrollbarTheme,
     InteractiveInkFeatureFactory? splashFactory,
-    bool? useMaterial3,
     VisualDensity? visualDensity,
     // COLOR
-    // [colorScheme] is the preferred way to configure colors. The other color
-    // properties will gradually be phased out, see
-    // https://github.com/flutter/flutter/issues/91772.
+    ColorScheme? colorScheme,
     Brightness? brightness,
+    // [colorScheme] is the preferred way to configure colors. The [Color] properties
+    // listed below (as well as primarySwatch) will gradually be phased out, see
+    // https://github.com/flutter/flutter/issues/91772.
     Color? canvasColor,
     Color? cardColor,
-    ColorScheme? colorScheme,
-    Color? dialogBackgroundColor,
     Color? disabledColor,
     Color? dividerColor,
     Color? focusColor,
     Color? highlightColor,
     Color? hintColor,
     Color? hoverColor,
-    Color? indicatorColor,
     Color? primaryColor,
     Color? primaryColorDark,
     Color? primaryColorLight,
@@ -1786,36 +1490,46 @@ class ThemeData with Diagnosticable {
     TextTheme? textTheme,
     Typography? typography,
     // COMPONENT THEMES
+    ActionIconThemeData? actionIconTheme,
     AppBarTheme? appBarTheme,
+    BadgeThemeData? badgeTheme,
     MaterialBannerThemeData? bannerTheme,
     BottomAppBarTheme? bottomAppBarTheme,
     BottomNavigationBarThemeData? bottomNavigationBarTheme,
     BottomSheetThemeData? bottomSheetTheme,
-    ButtonBarThemeData? buttonBarTheme,
     ButtonThemeData? buttonTheme,
-    CardTheme? cardTheme,
+    CardThemeData? cardTheme,
     CheckboxThemeData? checkboxTheme,
     ChipThemeData? chipTheme,
     DataTableThemeData? dataTableTheme,
-    DialogTheme? dialogTheme,
+    DatePickerThemeData? datePickerTheme,
+    DialogThemeData? dialogTheme,
     DividerThemeData? dividerTheme,
     DrawerThemeData? drawerTheme,
+    DropdownMenuThemeData? dropdownMenuTheme,
     ElevatedButtonThemeData? elevatedButtonTheme,
     ExpansionTileThemeData? expansionTileTheme,
     FilledButtonThemeData? filledButtonTheme,
     FloatingActionButtonThemeData? floatingActionButtonTheme,
     IconButtonThemeData? iconButtonTheme,
     ListTileThemeData? listTileTheme,
+    MenuBarThemeData? menuBarTheme,
+    MenuButtonThemeData? menuButtonTheme,
+    MenuThemeData? menuTheme,
     NavigationBarThemeData? navigationBarTheme,
+    NavigationDrawerThemeData? navigationDrawerTheme,
     NavigationRailThemeData? navigationRailTheme,
     OutlinedButtonThemeData? outlinedButtonTheme,
     PopupMenuThemeData? popupMenuTheme,
     ProgressIndicatorThemeData? progressIndicatorTheme,
     RadioThemeData? radioTheme,
+    SearchBarThemeData? searchBarTheme,
+    SearchViewThemeData? searchViewTheme,
+    SegmentedButtonThemeData? segmentedButtonTheme,
     SliderThemeData? sliderTheme,
     SnackBarThemeData? snackBarTheme,
     SwitchThemeData? switchTheme,
-    TabBarTheme? tabBarTheme,
+    TabBarThemeData? tabBarTheme,
     TextButtonThemeData? textButtonTheme,
     TextSelectionThemeData? textSelectionTheme,
     TimePickerThemeData? timePickerTheme,
@@ -1823,82 +1537,31 @@ class ThemeData with Diagnosticable {
     TooltipThemeData? tooltipTheme,
     // DEPRECATED (newest deprecations at the bottom)
     @Deprecated(
-      'No longer used by the framework, please remove any reference to it. '
-      'For more information, consult the migration guide at '
-      'https://flutter.dev/docs/release/breaking-changes/theme-data-accent-properties#migration-guide. '
-      'This feature was deprecated after v2.3.0-0.1.pre.',
+      'Use a ThemeData constructor (.from, .light, or .dark) instead. '
+      'These constructors all have a useMaterial3 argument, '
+      'and they set appropriate default values based on its value. '
+      'See the useMaterial3 API documentation for full details. '
+      'This feature was deprecated after v3.13.0-0.2.pre.',
     )
-    Color? accentColor,
+    bool? useMaterial3,
     @Deprecated(
-      'No longer used by the framework, please remove any reference to it. '
-      'For more information, consult the migration guide at '
-      'https://flutter.dev/docs/release/breaking-changes/theme-data-accent-properties#migration-guide. '
-      'This feature was deprecated after v2.3.0-0.1.pre.',
+      'Use OverflowBar instead. '
+      'This feature was deprecated after v3.21.0-10.0.pre.',
     )
-    Brightness? accentColorBrightness,
+    ButtonBarThemeData? buttonBarTheme,
     @Deprecated(
-      'No longer used by the framework, please remove any reference to it. '
-      'For more information, consult the migration guide at '
-      'https://flutter.dev/docs/release/breaking-changes/theme-data-accent-properties#migration-guide. '
-      'This feature was deprecated after v2.3.0-0.1.pre.',
+      'Use DialogThemeData.backgroundColor instead. '
+      'This feature was deprecated after v3.27.0-0.1.pre.',
     )
-    TextTheme? accentTextTheme,
+    Color? dialogBackgroundColor,
     @Deprecated(
-      'No longer used by the framework, please remove any reference to it. '
-      'For more information, consult the migration guide at '
-      'https://flutter.dev/docs/release/breaking-changes/theme-data-accent-properties#migration-guide. '
-      'This feature was deprecated after v2.3.0-0.1.pre.',
+      'Use TabBarThemeData.indicatorColor instead. '
+      'This feature was deprecated after v3.28.0-1.0.pre.',
     )
-    IconThemeData? accentIconTheme,
-    @Deprecated(
-      'No longer used by the framework, please remove any reference to it. '
-      'This feature was deprecated after v2.3.0-0.2.pre.',
-    )
-    Color? buttonColor,
-    @Deprecated(
-      'This "fix" is now enabled by default. '
-      'This feature was deprecated after v2.5.0-1.0.pre.',
-    )
-    bool? fixTextFieldOutlineLabel,
-    @Deprecated(
-      'No longer used by the framework, please remove any reference to it. '
-      'This feature was deprecated after v2.6.0-11.0.pre.',
-    )
-    Brightness? primaryColorBrightness,
-    @Deprecated(
-      'Use ThemeData.useMaterial3 or override ScrollBehavior.buildOverscrollIndicator. '
-      'This feature was deprecated after v2.13.0-0.0.pre.'
-    )
-    AndroidOverscrollIndicator? androidOverscrollIndicator,
-    @Deprecated(
-      'No longer used by the framework, please remove any reference to it. '
-      'For more information, consult the migration guide at '
-      'https://flutter.dev/docs/release/breaking-changes/toggleable-active-color#migration-guide. '
-      'This feature was deprecated after v2.13.0-0.4.pre.',
-    )
-    Color? toggleableActiveColor,
-    @Deprecated(
-      'No longer used by the framework, please remove any reference to it. '
-      'This feature was deprecated after v3.1.0-0.0.pre.',
-    )
-    Color? selectedRowColor,
-    @Deprecated(
-      'Use colorScheme.error instead. '
-      'This feature was deprecated after v2.6.0-11.0.pre.',
-    )
-    Color? errorColor,
-    @Deprecated(
-      'Use colorScheme.background instead. '
-      'This feature was deprecated after v2.6.0-11.0.pre.',
-    )
-    Color? backgroundColor,
-    @Deprecated(
-      'Use BottomAppBarTheme.color instead. '
-      'This feature was deprecated after v3.3.0-0.6.pre.',
-    )
-    Color? bottomAppBarColor,
+    Color? indicatorColor,
   }) {
     cupertinoOverrideTheme = cupertinoOverrideTheme?.noDefault();
+
     return ThemeData.raw(
       // For the sanity of the reader, make sure these properties are in the same
       // order in every place that they are separated by section comments (e.g.
@@ -1906,6 +1569,7 @@ class ThemeData with Diagnosticable {
       // alphabetical by symbol name.
 
       // GENERAL CONFIGURATION
+      adaptationMap: adaptations != null ? _createAdaptationMap(adaptations) : adaptationMap,
       applyElevationOverlayColor: applyElevationOverlayColor ?? this.applyElevationOverlayColor,
       cupertinoOverrideTheme: cupertinoOverrideTheme ?? this.cupertinoOverrideTheme,
       extensions: (extensions != null) ? _themeExtensionIterableToMap(extensions) : this.extensions,
@@ -1915,20 +1579,20 @@ class ThemeData with Diagnosticable {
       platform: platform ?? this.platform,
       scrollbarTheme: scrollbarTheme ?? this.scrollbarTheme,
       splashFactory: splashFactory ?? this.splashFactory,
+      // When deprecated useMaterial3 removed, maintain `this.useMaterial3` here
+      // for == evaluation.
       useMaterial3: useMaterial3 ?? this.useMaterial3,
       visualDensity: visualDensity ?? this.visualDensity,
       // COLOR
       canvasColor: canvasColor ?? this.canvasColor,
       cardColor: cardColor ?? this.cardColor,
       colorScheme: (colorScheme ?? this.colorScheme).copyWith(brightness: brightness),
-      dialogBackgroundColor: dialogBackgroundColor ?? this.dialogBackgroundColor,
       disabledColor: disabledColor ?? this.disabledColor,
       dividerColor: dividerColor ?? this.dividerColor,
       focusColor: focusColor ?? this.focusColor,
       highlightColor: highlightColor ?? this.highlightColor,
       hintColor: hintColor ?? this.hintColor,
       hoverColor: hoverColor ?? this.hoverColor,
-      indicatorColor: indicatorColor ?? this.indicatorColor,
       primaryColor: primaryColor ?? this.primaryColor,
       primaryColorDark: primaryColorDark ?? this.primaryColorDark,
       primaryColorLight: primaryColorLight ?? this.primaryColorLight,
@@ -1944,32 +1608,42 @@ class ThemeData with Diagnosticable {
       textTheme: textTheme ?? this.textTheme,
       typography: typography ?? this.typography,
       // COMPONENT THEMES
+      actionIconTheme: actionIconTheme ?? this.actionIconTheme,
       appBarTheme: appBarTheme ?? this.appBarTheme,
+      badgeTheme: badgeTheme ?? this.badgeTheme,
       bannerTheme: bannerTheme ?? this.bannerTheme,
       bottomAppBarTheme: bottomAppBarTheme ?? this.bottomAppBarTheme,
       bottomNavigationBarTheme: bottomNavigationBarTheme ?? this.bottomNavigationBarTheme,
       bottomSheetTheme: bottomSheetTheme ?? this.bottomSheetTheme,
-      buttonBarTheme: buttonBarTheme ?? this.buttonBarTheme,
       buttonTheme: buttonTheme ?? this.buttonTheme,
       cardTheme: cardTheme ?? this.cardTheme,
       checkboxTheme: checkboxTheme ?? this.checkboxTheme,
       chipTheme: chipTheme ?? this.chipTheme,
       dataTableTheme: dataTableTheme ?? this.dataTableTheme,
+      datePickerTheme: datePickerTheme ?? this.datePickerTheme,
       dialogTheme: dialogTheme ?? this.dialogTheme,
       dividerTheme: dividerTheme ?? this.dividerTheme,
       drawerTheme: drawerTheme ?? this.drawerTheme,
+      dropdownMenuTheme: dropdownMenuTheme ?? this.dropdownMenuTheme,
       elevatedButtonTheme: elevatedButtonTheme ?? this.elevatedButtonTheme,
       expansionTileTheme: expansionTileTheme ?? this.expansionTileTheme,
       filledButtonTheme: filledButtonTheme ?? this.filledButtonTheme,
       floatingActionButtonTheme: floatingActionButtonTheme ?? this.floatingActionButtonTheme,
       iconButtonTheme: iconButtonTheme ?? this.iconButtonTheme,
       listTileTheme: listTileTheme ?? this.listTileTheme,
+      menuBarTheme: menuBarTheme ?? this.menuBarTheme,
+      menuButtonTheme: menuButtonTheme ?? this.menuButtonTheme,
+      menuTheme: menuTheme ?? this.menuTheme,
       navigationBarTheme: navigationBarTheme ?? this.navigationBarTheme,
+      navigationDrawerTheme: navigationDrawerTheme ?? this.navigationDrawerTheme,
       navigationRailTheme: navigationRailTheme ?? this.navigationRailTheme,
       outlinedButtonTheme: outlinedButtonTheme ?? this.outlinedButtonTheme,
       popupMenuTheme: popupMenuTheme ?? this.popupMenuTheme,
       progressIndicatorTheme: progressIndicatorTheme ?? this.progressIndicatorTheme,
       radioTheme: radioTheme ?? this.radioTheme,
+      searchBarTheme: searchBarTheme ?? this.searchBarTheme,
+      searchViewTheme: searchViewTheme ?? this.searchViewTheme,
+      segmentedButtonTheme: segmentedButtonTheme ?? this.segmentedButtonTheme,
       sliderTheme: sliderTheme ?? this.sliderTheme,
       snackBarTheme: snackBarTheme ?? this.snackBarTheme,
       switchTheme: switchTheme ?? this.switchTheme,
@@ -1980,19 +1654,9 @@ class ThemeData with Diagnosticable {
       toggleButtonsTheme: toggleButtonsTheme ?? this.toggleButtonsTheme,
       tooltipTheme: tooltipTheme ?? this.tooltipTheme,
       // DEPRECATED (newest deprecations at the bottom)
-      accentColor: accentColor ?? _accentColor,
-      accentColorBrightness: accentColorBrightness ?? _accentColorBrightness,
-      accentTextTheme: accentTextTheme ?? _accentTextTheme,
-      accentIconTheme: accentIconTheme ?? _accentIconTheme,
-      buttonColor: buttonColor ?? _buttonColor,
-      fixTextFieldOutlineLabel: fixTextFieldOutlineLabel ?? _fixTextFieldOutlineLabel,
-      primaryColorBrightness: primaryColorBrightness ?? _primaryColorBrightness,
-      androidOverscrollIndicator: androidOverscrollIndicator ?? this.androidOverscrollIndicator,
-      toggleableActiveColor: toggleableActiveColor ?? _toggleableActiveColor,
-      selectedRowColor: selectedRowColor ?? _selectedRowColor,
-      errorColor: errorColor ?? _errorColor,
-      backgroundColor: backgroundColor ?? _backgroundColor,
-      bottomAppBarColor: bottomAppBarColor ?? _bottomAppBarColor,
+      buttonBarTheme: buttonBarTheme ?? _buttonBarTheme,
+      dialogBackgroundColor: dialogBackgroundColor ?? this.dialogBackgroundColor,
+      indicatorColor: indicatorColor ?? this.indicatorColor,
     );
   }
 
@@ -2026,15 +1690,12 @@ class ThemeData with Diagnosticable {
     //
     // There are only two hard things in Computer Science: cache invalidation
     // and naming things. -- Phil Karlton
-    assert(baseTheme != null);
-    assert(localTextGeometry != null);
 
     return _localizedThemeDataCache.putIfAbsent(
       _IdentityThemeDataCacheKey(baseTheme, localTextGeometry),
       () {
         return baseTheme.copyWith(
           primaryTextTheme: localTextGeometry.merge(baseTheme.primaryTextTheme),
-          accentTextTheme: localTextGeometry.merge(baseTheme.accentTextTheme),
           textTheme: localTextGeometry.merge(baseTheme.textTheme),
         );
       },
@@ -2067,38 +1728,48 @@ class ThemeData with Diagnosticable {
   /// Includes all theme extensions in [a] and [b].
   ///
   /// {@macro dart.ui.shadow.lerp}
-  static Map<Object, ThemeExtension<dynamic>> _lerpThemeExtensions(ThemeData a, ThemeData b, double t) {
+  static Map<Object, ThemeExtension<dynamic>> _lerpThemeExtensions(
+    ThemeData a,
+    ThemeData b,
+    double t,
+  ) {
     // Lerp [a].
-    final Map<Object, ThemeExtension<dynamic>> newExtensions = a.extensions.map((Object id, ThemeExtension<dynamic> extensionA) {
-        final ThemeExtension<dynamic>? extensionB = b.extensions[id];
-        return MapEntry<Object, ThemeExtension<dynamic>>(id, extensionA.lerp(extensionB, t));
-      });
+    final Map<Object, ThemeExtension<dynamic>> newExtensions = a.extensions.map((
+      Object id,
+      ThemeExtension<dynamic> extensionA,
+    ) {
+      final ThemeExtension<dynamic>? extensionB = b.extensions[id];
+      return MapEntry<Object, ThemeExtension<dynamic>>(id, extensionA.lerp(extensionB, t));
+    });
     // Add [b]-only extensions.
-    newExtensions.addEntries(b.extensions.entries.where(
-      (MapEntry<Object, ThemeExtension<dynamic>> entry) =>
-          !a.extensions.containsKey(entry.key)));
+    newExtensions.addEntries(
+      b.extensions.entries.where(
+        (MapEntry<Object, ThemeExtension<dynamic>> entry) => !a.extensions.containsKey(entry.key),
+      ),
+    );
 
     return newExtensions;
   }
 
   /// Convert the [extensionsIterable] passed to [ThemeData.new] or [copyWith]
   /// to the stored [extensions] map, where each entry's key consists of the extension's type.
-  static Map<Object, ThemeExtension<dynamic>> _themeExtensionIterableToMap(Iterable<ThemeExtension<dynamic>> extensionsIterable) {
+  static Map<Object, ThemeExtension<dynamic>> _themeExtensionIterableToMap(
+    Iterable<ThemeExtension<dynamic>> extensionsIterable,
+  ) {
     return Map<Object, ThemeExtension<dynamic>>.unmodifiable(<Object, ThemeExtension<dynamic>>{
       // Strangely, the cast is necessary for tests to run.
-      for (final ThemeExtension<dynamic> extension in extensionsIterable) extension.type: extension as ThemeExtension<ThemeExtension<dynamic>>,
+      for (final ThemeExtension<dynamic> extension in extensionsIterable)
+        extension.type: extension as ThemeExtension<ThemeExtension<dynamic>>,
     });
   }
 
   /// Linearly interpolate between two themes.
   ///
-  /// The arguments must not be null.
-  ///
   /// {@macro dart.ui.shadow.lerp}
   static ThemeData lerp(ThemeData a, ThemeData b, double t) {
-    assert(a != null);
-    assert(b != null);
-    assert(t != null);
+    if (identical(a, b)) {
+      return a;
+    }
     return ThemeData.raw(
       // For the sanity of the reader, make sure these properties are in the same
       // order in every place that they are separated by section comments (e.g.
@@ -2106,12 +1777,14 @@ class ThemeData with Diagnosticable {
       // alphabetical by symbol name.
 
       // GENERAL CONFIGURATION
-      applyElevationOverlayColor:t < 0.5 ? a.applyElevationOverlayColor : b.applyElevationOverlayColor,
-      cupertinoOverrideTheme:t < 0.5 ? a.cupertinoOverrideTheme : b.cupertinoOverrideTheme,
+      adaptationMap: t < 0.5 ? a.adaptationMap : b.adaptationMap,
+      applyElevationOverlayColor:
+          t < 0.5 ? a.applyElevationOverlayColor : b.applyElevationOverlayColor,
+      cupertinoOverrideTheme: t < 0.5 ? a.cupertinoOverrideTheme : b.cupertinoOverrideTheme,
       extensions: _lerpThemeExtensions(a, b, t),
-      inputDecorationTheme:t < 0.5 ? a.inputDecorationTheme : b.inputDecorationTheme,
-      materialTapTargetSize:t < 0.5 ? a.materialTapTargetSize : b.materialTapTargetSize,
-      pageTransitionsTheme:t < 0.5 ? a.pageTransitionsTheme : b.pageTransitionsTheme,
+      inputDecorationTheme: t < 0.5 ? a.inputDecorationTheme : b.inputDecorationTheme,
+      materialTapTargetSize: t < 0.5 ? a.materialTapTargetSize : b.materialTapTargetSize,
+      pageTransitionsTheme: t < 0.5 ? a.pageTransitionsTheme : b.pageTransitionsTheme,
       platform: t < 0.5 ? a.platform : b.platform,
       scrollbarTheme: ScrollbarThemeData.lerp(a.scrollbarTheme, b.scrollbarTheme, t),
       splashFactory: t < 0.5 ? a.splashFactory : b.splashFactory,
@@ -2121,14 +1794,12 @@ class ThemeData with Diagnosticable {
       canvasColor: Color.lerp(a.canvasColor, b.canvasColor, t)!,
       cardColor: Color.lerp(a.cardColor, b.cardColor, t)!,
       colorScheme: ColorScheme.lerp(a.colorScheme, b.colorScheme, t),
-      dialogBackgroundColor: Color.lerp(a.dialogBackgroundColor, b.dialogBackgroundColor, t)!,
       disabledColor: Color.lerp(a.disabledColor, b.disabledColor, t)!,
       dividerColor: Color.lerp(a.dividerColor, b.dividerColor, t)!,
       focusColor: Color.lerp(a.focusColor, b.focusColor, t)!,
       highlightColor: Color.lerp(a.highlightColor, b.highlightColor, t)!,
       hintColor: Color.lerp(a.hintColor, b.hintColor, t)!,
       hoverColor: Color.lerp(a.hoverColor, b.hoverColor, t)!,
-      indicatorColor: Color.lerp(a.indicatorColor, b.indicatorColor, t)!,
       primaryColor: Color.lerp(a.primaryColor, b.primaryColor, t)!,
       primaryColorDark: Color.lerp(a.primaryColorDark, b.primaryColorDark, t)!,
       primaryColorLight: Color.lerp(a.primaryColorLight, b.primaryColorLight, t)!,
@@ -2144,55 +1815,77 @@ class ThemeData with Diagnosticable {
       textTheme: TextTheme.lerp(a.textTheme, b.textTheme, t),
       typography: Typography.lerp(a.typography, b.typography, t),
       // COMPONENT THEMES
+      actionIconTheme: ActionIconThemeData.lerp(a.actionIconTheme, b.actionIconTheme, t),
       appBarTheme: AppBarTheme.lerp(a.appBarTheme, b.appBarTheme, t),
+      badgeTheme: BadgeThemeData.lerp(a.badgeTheme, b.badgeTheme, t),
       bannerTheme: MaterialBannerThemeData.lerp(a.bannerTheme, b.bannerTheme, t),
       bottomAppBarTheme: BottomAppBarTheme.lerp(a.bottomAppBarTheme, b.bottomAppBarTheme, t),
-      bottomNavigationBarTheme: BottomNavigationBarThemeData.lerp(a.bottomNavigationBarTheme, b.bottomNavigationBarTheme, t),
+      bottomNavigationBarTheme: BottomNavigationBarThemeData.lerp(
+        a.bottomNavigationBarTheme,
+        b.bottomNavigationBarTheme,
+        t,
+      ),
       bottomSheetTheme: BottomSheetThemeData.lerp(a.bottomSheetTheme, b.bottomSheetTheme, t)!,
-      buttonBarTheme: ButtonBarThemeData.lerp(a.buttonBarTheme, b.buttonBarTheme, t)!,
       buttonTheme: t < 0.5 ? a.buttonTheme : b.buttonTheme,
-      cardTheme: CardTheme.lerp(a.cardTheme, b.cardTheme, t),
+      cardTheme: CardThemeData.lerp(a.cardTheme, b.cardTheme, t),
       checkboxTheme: CheckboxThemeData.lerp(a.checkboxTheme, b.checkboxTheme, t),
       chipTheme: ChipThemeData.lerp(a.chipTheme, b.chipTheme, t)!,
       dataTableTheme: DataTableThemeData.lerp(a.dataTableTheme, b.dataTableTheme, t),
-      dialogTheme: DialogTheme.lerp(a.dialogTheme, b.dialogTheme, t),
+      datePickerTheme: DatePickerThemeData.lerp(a.datePickerTheme, b.datePickerTheme, t),
+      dialogTheme: DialogThemeData.lerp(a.dialogTheme, b.dialogTheme, t),
       dividerTheme: DividerThemeData.lerp(a.dividerTheme, b.dividerTheme, t),
       drawerTheme: DrawerThemeData.lerp(a.drawerTheme, b.drawerTheme, t)!,
-      elevatedButtonTheme: ElevatedButtonThemeData.lerp(a.elevatedButtonTheme, b.elevatedButtonTheme, t)!,
-      expansionTileTheme: ExpansionTileThemeData.lerp(a.expansionTileTheme, b.expansionTileTheme, t)!,
+      dropdownMenuTheme: DropdownMenuThemeData.lerp(a.dropdownMenuTheme, b.dropdownMenuTheme, t),
+      elevatedButtonTheme:
+          ElevatedButtonThemeData.lerp(a.elevatedButtonTheme, b.elevatedButtonTheme, t)!,
+      expansionTileTheme:
+          ExpansionTileThemeData.lerp(a.expansionTileTheme, b.expansionTileTheme, t)!,
       filledButtonTheme: FilledButtonThemeData.lerp(a.filledButtonTheme, b.filledButtonTheme, t)!,
-      floatingActionButtonTheme: FloatingActionButtonThemeData.lerp(a.floatingActionButtonTheme, b.floatingActionButtonTheme, t)!,
+      floatingActionButtonTheme:
+          FloatingActionButtonThemeData.lerp(
+            a.floatingActionButtonTheme,
+            b.floatingActionButtonTheme,
+            t,
+          )!,
       iconButtonTheme: IconButtonThemeData.lerp(a.iconButtonTheme, b.iconButtonTheme, t)!,
       listTileTheme: ListTileThemeData.lerp(a.listTileTheme, b.listTileTheme, t)!,
-      navigationBarTheme: NavigationBarThemeData.lerp(a.navigationBarTheme, b.navigationBarTheme, t)!,
-      navigationRailTheme: NavigationRailThemeData.lerp(a.navigationRailTheme, b.navigationRailTheme, t)!,
-      outlinedButtonTheme: OutlinedButtonThemeData.lerp(a.outlinedButtonTheme, b.outlinedButtonTheme, t)!,
+      menuBarTheme: MenuBarThemeData.lerp(a.menuBarTheme, b.menuBarTheme, t)!,
+      menuButtonTheme: MenuButtonThemeData.lerp(a.menuButtonTheme, b.menuButtonTheme, t)!,
+      menuTheme: MenuThemeData.lerp(a.menuTheme, b.menuTheme, t)!,
+      navigationBarTheme:
+          NavigationBarThemeData.lerp(a.navigationBarTheme, b.navigationBarTheme, t)!,
+      navigationDrawerTheme:
+          NavigationDrawerThemeData.lerp(a.navigationDrawerTheme, b.navigationDrawerTheme, t)!,
+      navigationRailTheme:
+          NavigationRailThemeData.lerp(a.navigationRailTheme, b.navigationRailTheme, t)!,
+      outlinedButtonTheme:
+          OutlinedButtonThemeData.lerp(a.outlinedButtonTheme, b.outlinedButtonTheme, t)!,
       popupMenuTheme: PopupMenuThemeData.lerp(a.popupMenuTheme, b.popupMenuTheme, t)!,
-      progressIndicatorTheme: ProgressIndicatorThemeData.lerp(a.progressIndicatorTheme, b.progressIndicatorTheme, t)!,
+      progressIndicatorTheme:
+          ProgressIndicatorThemeData.lerp(a.progressIndicatorTheme, b.progressIndicatorTheme, t)!,
       radioTheme: RadioThemeData.lerp(a.radioTheme, b.radioTheme, t),
+      searchBarTheme: SearchBarThemeData.lerp(a.searchBarTheme, b.searchBarTheme, t)!,
+      searchViewTheme: SearchViewThemeData.lerp(a.searchViewTheme, b.searchViewTheme, t)!,
+      segmentedButtonTheme: SegmentedButtonThemeData.lerp(
+        a.segmentedButtonTheme,
+        b.segmentedButtonTheme,
+        t,
+      ),
       sliderTheme: SliderThemeData.lerp(a.sliderTheme, b.sliderTheme, t),
       snackBarTheme: SnackBarThemeData.lerp(a.snackBarTheme, b.snackBarTheme, t),
       switchTheme: SwitchThemeData.lerp(a.switchTheme, b.switchTheme, t),
-      tabBarTheme: TabBarTheme.lerp(a.tabBarTheme, b.tabBarTheme, t),
+      tabBarTheme: TabBarThemeData.lerp(a.tabBarTheme, b.tabBarTheme, t),
       textButtonTheme: TextButtonThemeData.lerp(a.textButtonTheme, b.textButtonTheme, t)!,
-      textSelectionTheme: TextSelectionThemeData.lerp(a.textSelectionTheme, b.textSelectionTheme, t)!,
+      textSelectionTheme:
+          TextSelectionThemeData.lerp(a.textSelectionTheme, b.textSelectionTheme, t)!,
       timePickerTheme: TimePickerThemeData.lerp(a.timePickerTheme, b.timePickerTheme, t),
-      toggleButtonsTheme: ToggleButtonsThemeData.lerp(a.toggleButtonsTheme, b.toggleButtonsTheme, t)!,
+      toggleButtonsTheme:
+          ToggleButtonsThemeData.lerp(a.toggleButtonsTheme, b.toggleButtonsTheme, t)!,
       tooltipTheme: TooltipThemeData.lerp(a.tooltipTheme, b.tooltipTheme, t)!,
       // DEPRECATED (newest deprecations at the bottom)
-      accentColor: Color.lerp(a.accentColor, b.accentColor, t),
-      accentColorBrightness: t < 0.5 ? a.accentColorBrightness : b.accentColorBrightness,
-      accentTextTheme: TextTheme.lerp(a.accentTextTheme, b.accentTextTheme, t),
-      accentIconTheme: IconThemeData.lerp(a.accentIconTheme, b.accentIconTheme, t),
-      buttonColor: Color.lerp(a.buttonColor, b.buttonColor, t),
-      fixTextFieldOutlineLabel: t < 0.5 ? a.fixTextFieldOutlineLabel : b.fixTextFieldOutlineLabel,
-      primaryColorBrightness: t < 0.5 ? a.primaryColorBrightness : b.primaryColorBrightness,
-      androidOverscrollIndicator:t < 0.5 ? a.androidOverscrollIndicator : b.androidOverscrollIndicator,
-      toggleableActiveColor: Color.lerp(a.toggleableActiveColor, b.toggleableActiveColor, t),
-      selectedRowColor: Color.lerp(a.selectedRowColor, b.selectedRowColor, t),
-      errorColor: Color.lerp(a.errorColor, b.errorColor, t),
-      backgroundColor: Color.lerp(a.backgroundColor, b.backgroundColor, t),
-      bottomAppBarColor: Color.lerp(a.bottomAppBarColor, b.bottomAppBarColor, t),
+      buttonBarTheme: ButtonBarThemeData.lerp(a.buttonBarTheme, b.buttonBarTheme, t),
+      dialogBackgroundColor: Color.lerp(a.dialogBackgroundColor, b.dialogBackgroundColor, t)!,
+      indicatorColor: Color.lerp(a.indicatorColor, b.indicatorColor, t)!,
     );
   }
 
@@ -2206,8 +1899,8 @@ class ThemeData with Diagnosticable {
         // order in every place that they are separated by section comments (e.g.
         // GENERAL CONFIGURATION). Each section except for deprecations should be
         // alphabetical by symbol name.
-
         // GENERAL CONFIGURATION
+        mapEquals(other.adaptationMap, adaptationMap) &&
         other.applyElevationOverlayColor == applyElevationOverlayColor &&
         other.cupertinoOverrideTheme == cupertinoOverrideTheme &&
         mapEquals(other.extensions, extensions) &&
@@ -2223,14 +1916,12 @@ class ThemeData with Diagnosticable {
         other.canvasColor == canvasColor &&
         other.cardColor == cardColor &&
         other.colorScheme == colorScheme &&
-        other.dialogBackgroundColor == dialogBackgroundColor &&
         other.disabledColor == disabledColor &&
         other.dividerColor == dividerColor &&
         other.focusColor == focusColor &&
         other.highlightColor == highlightColor &&
         other.hintColor == hintColor &&
         other.hoverColor == hoverColor &&
-        other.indicatorColor == indicatorColor &&
         other.primaryColor == primaryColor &&
         other.primaryColorDark == primaryColorDark &&
         other.primaryColorLight == primaryColorLight &&
@@ -2246,32 +1937,42 @@ class ThemeData with Diagnosticable {
         other.textTheme == textTheme &&
         other.typography == typography &&
         // COMPONENT THEMES
+        other.actionIconTheme == actionIconTheme &&
         other.appBarTheme == appBarTheme &&
+        other.badgeTheme == badgeTheme &&
         other.bannerTheme == bannerTheme &&
         other.bottomAppBarTheme == bottomAppBarTheme &&
         other.bottomNavigationBarTheme == bottomNavigationBarTheme &&
         other.bottomSheetTheme == bottomSheetTheme &&
-        other.buttonBarTheme == buttonBarTheme &&
         other.buttonTheme == buttonTheme &&
         other.cardTheme == cardTheme &&
         other.checkboxTheme == checkboxTheme &&
         other.chipTheme == chipTheme &&
         other.dataTableTheme == dataTableTheme &&
+        other.datePickerTheme == datePickerTheme &&
         other.dialogTheme == dialogTheme &&
         other.dividerTheme == dividerTheme &&
         other.drawerTheme == drawerTheme &&
+        other.dropdownMenuTheme == dropdownMenuTheme &&
         other.elevatedButtonTheme == elevatedButtonTheme &&
         other.expansionTileTheme == expansionTileTheme &&
         other.filledButtonTheme == filledButtonTheme &&
         other.floatingActionButtonTheme == floatingActionButtonTheme &&
         other.iconButtonTheme == iconButtonTheme &&
         other.listTileTheme == listTileTheme &&
+        other.menuBarTheme == menuBarTheme &&
+        other.menuButtonTheme == menuButtonTheme &&
+        other.menuTheme == menuTheme &&
         other.navigationBarTheme == navigationBarTheme &&
+        other.navigationDrawerTheme == navigationDrawerTheme &&
         other.navigationRailTheme == navigationRailTheme &&
         other.outlinedButtonTheme == outlinedButtonTheme &&
         other.popupMenuTheme == popupMenuTheme &&
         other.progressIndicatorTheme == progressIndicatorTheme &&
         other.radioTheme == radioTheme &&
+        other.searchBarTheme == searchBarTheme &&
+        other.searchViewTheme == searchViewTheme &&
+        other.segmentedButtonTheme == segmentedButtonTheme &&
         other.sliderTheme == sliderTheme &&
         other.snackBarTheme == snackBarTheme &&
         other.switchTheme == switchTheme &&
@@ -2282,19 +1983,9 @@ class ThemeData with Diagnosticable {
         other.toggleButtonsTheme == toggleButtonsTheme &&
         other.tooltipTheme == tooltipTheme &&
         // DEPRECATED (newest deprecations at the bottom)
-        other.accentColor == accentColor &&
-        other.accentColorBrightness == accentColorBrightness &&
-        other.accentTextTheme == accentTextTheme &&
-        other.accentIconTheme == accentIconTheme &&
-        other.buttonColor == buttonColor &&
-        other.fixTextFieldOutlineLabel == fixTextFieldOutlineLabel &&
-        other.primaryColorBrightness == primaryColorBrightness &&
-        other.androidOverscrollIndicator == androidOverscrollIndicator &&
-        other.toggleableActiveColor == toggleableActiveColor &&
-        other.selectedRowColor == selectedRowColor &&
-        other.errorColor == errorColor &&
-        other.backgroundColor == backgroundColor &&
-        other.bottomAppBarColor == bottomAppBarColor;
+        other.buttonBarTheme == buttonBarTheme &&
+        other.dialogBackgroundColor == dialogBackgroundColor &&
+        other.indicatorColor == indicatorColor;
   }
 
   @override
@@ -2306,6 +1997,8 @@ class ThemeData with Diagnosticable {
       // alphabetical by symbol name.
 
       // GENERAL CONFIGURATION
+      ...adaptationMap.keys,
+      ...adaptationMap.values,
       applyElevationOverlayColor,
       cupertinoOverrideTheme,
       ...extensions.keys,
@@ -2322,14 +2015,12 @@ class ThemeData with Diagnosticable {
       canvasColor,
       cardColor,
       colorScheme,
-      dialogBackgroundColor,
       disabledColor,
       dividerColor,
       focusColor,
       highlightColor,
       hintColor,
       hoverColor,
-      indicatorColor,
       primaryColor,
       primaryColorDark,
       primaryColorLight,
@@ -2345,32 +2036,42 @@ class ThemeData with Diagnosticable {
       textTheme,
       typography,
       // COMPONENT THEMES
+      actionIconTheme,
       appBarTheme,
+      badgeTheme,
       bannerTheme,
       bottomAppBarTheme,
       bottomNavigationBarTheme,
       bottomSheetTheme,
-      buttonBarTheme,
       buttonTheme,
       cardTheme,
       checkboxTheme,
       chipTheme,
       dataTableTheme,
+      datePickerTheme,
       dialogTheme,
       dividerTheme,
       drawerTheme,
+      dropdownMenuTheme,
       elevatedButtonTheme,
       expansionTileTheme,
       filledButtonTheme,
       floatingActionButtonTheme,
       iconButtonTheme,
       listTileTheme,
+      menuBarTheme,
+      menuButtonTheme,
+      menuTheme,
       navigationBarTheme,
+      navigationDrawerTheme,
       navigationRailTheme,
       outlinedButtonTheme,
       popupMenuTheme,
       progressIndicatorTheme,
       radioTheme,
+      searchBarTheme,
+      searchViewTheme,
+      segmentedButtonTheme,
       sliderTheme,
       snackBarTheme,
       switchTheme,
@@ -2381,19 +2082,9 @@ class ThemeData with Diagnosticable {
       toggleButtonsTheme,
       tooltipTheme,
       // DEPRECATED (newest deprecations at the bottom)
-      accentColor,
-      accentColorBrightness,
-      accentTextTheme,
-      accentIconTheme,
-      buttonColor,
-      fixTextFieldOutlineLabel,
-      primaryColorBrightness,
-      androidOverscrollIndicator,
-      toggleableActiveColor,
-      selectedRowColor,
-      errorColor,
-      backgroundColor,
-      bottomAppBarColor,
+      buttonBarTheme,
+      dialogBackgroundColor,
+      indicatorColor,
     ];
     return Object.hashAll(values);
   }
@@ -2408,93 +2099,633 @@ class ThemeData with Diagnosticable {
     // alphabetical by symbol name.
 
     // GENERAL CONFIGURATION
-    properties.add(DiagnosticsProperty<bool>('applyElevationOverlayColor', applyElevationOverlayColor, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<NoDefaultCupertinoThemeData>('cupertinoOverrideTheme', cupertinoOverrideTheme, defaultValue: defaultData.cupertinoOverrideTheme, level: DiagnosticLevel.debug));
-    properties.add(IterableProperty<ThemeExtension<dynamic>>('extensions', extensions.values, defaultValue: defaultData.extensions.values, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<InputDecorationTheme>('inputDecorationTheme', inputDecorationTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<MaterialTapTargetSize>('materialTapTargetSize', materialTapTargetSize, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<PageTransitionsTheme>('pageTransitionsTheme', pageTransitionsTheme, level: DiagnosticLevel.debug));
-    properties.add(EnumProperty<TargetPlatform>('platform', platform, defaultValue: defaultTargetPlatform, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<ScrollbarThemeData>('scrollbarTheme', scrollbarTheme, defaultValue: defaultData.scrollbarTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<InteractiveInkFeatureFactory>('splashFactory', splashFactory, defaultValue: defaultData.splashFactory, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<bool>('useMaterial3', useMaterial3, defaultValue: defaultData.useMaterial3, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<VisualDensity>('visualDensity', visualDensity, defaultValue: defaultData.visualDensity, level: DiagnosticLevel.debug));
+    properties.add(
+      IterableProperty<Adaptation<dynamic>>(
+        'adaptations',
+        adaptationMap.values,
+        defaultValue: defaultData.adaptationMap.values,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<bool>(
+        'applyElevationOverlayColor',
+        applyElevationOverlayColor,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<NoDefaultCupertinoThemeData>(
+        'cupertinoOverrideTheme',
+        cupertinoOverrideTheme,
+        defaultValue: defaultData.cupertinoOverrideTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      IterableProperty<ThemeExtension<dynamic>>(
+        'extensions',
+        extensions.values,
+        defaultValue: defaultData.extensions.values,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<InputDecorationTheme>(
+        'inputDecorationTheme',
+        inputDecorationTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<MaterialTapTargetSize>(
+        'materialTapTargetSize',
+        materialTapTargetSize,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<PageTransitionsTheme>(
+        'pageTransitionsTheme',
+        pageTransitionsTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      EnumProperty<TargetPlatform>(
+        'platform',
+        platform,
+        defaultValue: defaultTargetPlatform,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<ScrollbarThemeData>(
+        'scrollbarTheme',
+        scrollbarTheme,
+        defaultValue: defaultData.scrollbarTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<InteractiveInkFeatureFactory>(
+        'splashFactory',
+        splashFactory,
+        defaultValue: defaultData.splashFactory,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<bool>(
+        'useMaterial3',
+        useMaterial3,
+        defaultValue: defaultData.useMaterial3,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<VisualDensity>(
+        'visualDensity',
+        visualDensity,
+        defaultValue: defaultData.visualDensity,
+        level: DiagnosticLevel.debug,
+      ),
+    );
     // COLORS
-    properties.add(ColorProperty('canvasColor', canvasColor, defaultValue: defaultData.canvasColor, level: DiagnosticLevel.debug));
-    properties.add(ColorProperty('cardColor', cardColor, defaultValue: defaultData.cardColor, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<ColorScheme>('colorScheme', colorScheme, defaultValue: defaultData.colorScheme, level: DiagnosticLevel.debug));
-    properties.add(ColorProperty('dialogBackgroundColor', dialogBackgroundColor, defaultValue: defaultData.dialogBackgroundColor, level: DiagnosticLevel.debug));
-    properties.add(ColorProperty('disabledColor', disabledColor, defaultValue: defaultData.disabledColor, level: DiagnosticLevel.debug));
-    properties.add(ColorProperty('dividerColor', dividerColor, defaultValue: defaultData.dividerColor, level: DiagnosticLevel.debug));
-    properties.add(ColorProperty('focusColor', focusColor, defaultValue: defaultData.focusColor, level: DiagnosticLevel.debug));
-    properties.add(ColorProperty('highlightColor', highlightColor, defaultValue: defaultData.highlightColor, level: DiagnosticLevel.debug));
-    properties.add(ColorProperty('hintColor', hintColor, defaultValue: defaultData.hintColor, level: DiagnosticLevel.debug));
-    properties.add(ColorProperty('hoverColor', hoverColor, defaultValue: defaultData.hoverColor, level: DiagnosticLevel.debug));
-    properties.add(ColorProperty('indicatorColor', indicatorColor, defaultValue: defaultData.indicatorColor, level: DiagnosticLevel.debug));
-    properties.add(ColorProperty('primaryColorDark', primaryColorDark, defaultValue: defaultData.primaryColorDark, level: DiagnosticLevel.debug));
-    properties.add(ColorProperty('primaryColorLight', primaryColorLight, defaultValue: defaultData.primaryColorLight, level: DiagnosticLevel.debug));
-    properties.add(ColorProperty('primaryColor', primaryColor, defaultValue: defaultData.primaryColor, level: DiagnosticLevel.debug));
-    properties.add(ColorProperty('scaffoldBackgroundColor', scaffoldBackgroundColor, defaultValue: defaultData.scaffoldBackgroundColor, level: DiagnosticLevel.debug));
-    properties.add(ColorProperty('secondaryHeaderColor', secondaryHeaderColor, defaultValue: defaultData.secondaryHeaderColor, level: DiagnosticLevel.debug));
-    properties.add(ColorProperty('shadowColor', shadowColor, defaultValue: defaultData.shadowColor, level: DiagnosticLevel.debug));
-    properties.add(ColorProperty('splashColor', splashColor, defaultValue: defaultData.splashColor, level: DiagnosticLevel.debug));
-    properties.add(ColorProperty('unselectedWidgetColor', unselectedWidgetColor, defaultValue: defaultData.unselectedWidgetColor, level: DiagnosticLevel.debug));
+    properties.add(
+      ColorProperty(
+        'canvasColor',
+        canvasColor,
+        defaultValue: defaultData.canvasColor,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      ColorProperty(
+        'cardColor',
+        cardColor,
+        defaultValue: defaultData.cardColor,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<ColorScheme>(
+        'colorScheme',
+        colorScheme,
+        defaultValue: defaultData.colorScheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      ColorProperty(
+        'disabledColor',
+        disabledColor,
+        defaultValue: defaultData.disabledColor,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      ColorProperty(
+        'dividerColor',
+        dividerColor,
+        defaultValue: defaultData.dividerColor,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      ColorProperty(
+        'focusColor',
+        focusColor,
+        defaultValue: defaultData.focusColor,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      ColorProperty(
+        'highlightColor',
+        highlightColor,
+        defaultValue: defaultData.highlightColor,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      ColorProperty(
+        'hintColor',
+        hintColor,
+        defaultValue: defaultData.hintColor,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      ColorProperty(
+        'hoverColor',
+        hoverColor,
+        defaultValue: defaultData.hoverColor,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      ColorProperty(
+        'primaryColorDark',
+        primaryColorDark,
+        defaultValue: defaultData.primaryColorDark,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      ColorProperty(
+        'primaryColorLight',
+        primaryColorLight,
+        defaultValue: defaultData.primaryColorLight,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      ColorProperty(
+        'primaryColor',
+        primaryColor,
+        defaultValue: defaultData.primaryColor,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      ColorProperty(
+        'scaffoldBackgroundColor',
+        scaffoldBackgroundColor,
+        defaultValue: defaultData.scaffoldBackgroundColor,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      ColorProperty(
+        'secondaryHeaderColor',
+        secondaryHeaderColor,
+        defaultValue: defaultData.secondaryHeaderColor,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      ColorProperty(
+        'shadowColor',
+        shadowColor,
+        defaultValue: defaultData.shadowColor,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      ColorProperty(
+        'splashColor',
+        splashColor,
+        defaultValue: defaultData.splashColor,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      ColorProperty(
+        'unselectedWidgetColor',
+        unselectedWidgetColor,
+        defaultValue: defaultData.unselectedWidgetColor,
+        level: DiagnosticLevel.debug,
+      ),
+    );
     // TYPOGRAPHY & ICONOGRAPHY
-    properties.add(DiagnosticsProperty<IconThemeData>('iconTheme', iconTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<IconThemeData>('primaryIconTheme', primaryIconTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<TextTheme>('primaryTextTheme', primaryTextTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<TextTheme>('textTheme', textTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<Typography>('typography', typography, defaultValue: defaultData.typography, level: DiagnosticLevel.debug));
+    properties.add(
+      DiagnosticsProperty<IconThemeData>('iconTheme', iconTheme, level: DiagnosticLevel.debug),
+    );
+    properties.add(
+      DiagnosticsProperty<IconThemeData>(
+        'primaryIconTheme',
+        primaryIconTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<TextTheme>(
+        'primaryTextTheme',
+        primaryTextTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<TextTheme>('textTheme', textTheme, level: DiagnosticLevel.debug),
+    );
+    properties.add(
+      DiagnosticsProperty<Typography>(
+        'typography',
+        typography,
+        defaultValue: defaultData.typography,
+        level: DiagnosticLevel.debug,
+      ),
+    );
     // COMPONENT THEMES
-    properties.add(DiagnosticsProperty<AppBarTheme>('appBarTheme', appBarTheme, defaultValue: defaultData.appBarTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<MaterialBannerThemeData>('bannerTheme', bannerTheme, defaultValue: defaultData.bannerTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<BottomAppBarTheme>('bottomAppBarTheme', bottomAppBarTheme, defaultValue: defaultData.bottomAppBarTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<BottomNavigationBarThemeData>('bottomNavigationBarTheme', bottomNavigationBarTheme, defaultValue: defaultData.bottomNavigationBarTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<BottomSheetThemeData>('bottomSheetTheme', bottomSheetTheme, defaultValue: defaultData.bottomSheetTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<ButtonBarThemeData>('buttonBarTheme', buttonBarTheme, defaultValue: defaultData.buttonBarTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<ButtonThemeData>('buttonTheme', buttonTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<CardTheme>('cardTheme', cardTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<CheckboxThemeData>('checkboxTheme', checkboxTheme, defaultValue: defaultData.checkboxTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<ChipThemeData>('chipTheme', chipTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<DataTableThemeData>('dataTableTheme', dataTableTheme, defaultValue: defaultData.dataTableTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<DialogTheme>('dialogTheme', dialogTheme, defaultValue: defaultData.dialogTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<DividerThemeData>('dividerTheme', dividerTheme, defaultValue: defaultData.dividerTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<DrawerThemeData>('drawerTheme', drawerTheme, defaultValue: defaultData.drawerTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<ElevatedButtonThemeData>('elevatedButtonTheme', elevatedButtonTheme, defaultValue: defaultData.elevatedButtonTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<ExpansionTileThemeData>('expansionTileTheme', expansionTileTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<FilledButtonThemeData>('filledButtonTheme', filledButtonTheme, defaultValue: defaultData.filledButtonTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<FloatingActionButtonThemeData>('floatingActionButtonTheme', floatingActionButtonTheme, defaultValue: defaultData.floatingActionButtonTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<IconButtonThemeData>('iconButtonTheme', iconButtonTheme, defaultValue: defaultData.iconButtonTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<ListTileThemeData>('listTileTheme', listTileTheme, defaultValue: defaultData.listTileTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<NavigationBarThemeData>('navigationBarTheme', navigationBarTheme, defaultValue: defaultData.navigationBarTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<NavigationRailThemeData>('navigationRailTheme', navigationRailTheme, defaultValue: defaultData.navigationRailTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<OutlinedButtonThemeData>('outlinedButtonTheme', outlinedButtonTheme, defaultValue: defaultData.outlinedButtonTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<PopupMenuThemeData>('popupMenuTheme', popupMenuTheme, defaultValue: defaultData.popupMenuTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<ProgressIndicatorThemeData>('progressIndicatorTheme', progressIndicatorTheme, defaultValue: defaultData.progressIndicatorTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<RadioThemeData>('radioTheme', radioTheme, defaultValue: defaultData.radioTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<SliderThemeData>('sliderTheme', sliderTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<SnackBarThemeData>('snackBarTheme', snackBarTheme, defaultValue: defaultData.snackBarTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<SwitchThemeData>('switchTheme', switchTheme, defaultValue: defaultData.switchTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<TabBarTheme>('tabBarTheme', tabBarTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<TextButtonThemeData>('textButtonTheme', textButtonTheme, defaultValue: defaultData.textButtonTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<TextSelectionThemeData>('textSelectionTheme', textSelectionTheme, defaultValue: defaultData.textSelectionTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<TimePickerThemeData>('timePickerTheme', timePickerTheme, defaultValue: defaultData.timePickerTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<ToggleButtonsThemeData>('toggleButtonsTheme', toggleButtonsTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<TooltipThemeData>('tooltipTheme', tooltipTheme, level: DiagnosticLevel.debug));
+    properties.add(
+      DiagnosticsProperty<ActionIconThemeData>(
+        'actionIconTheme',
+        actionIconTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<AppBarTheme>(
+        'appBarTheme',
+        appBarTheme,
+        defaultValue: defaultData.appBarTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<BadgeThemeData>(
+        'badgeTheme',
+        badgeTheme,
+        defaultValue: defaultData.badgeTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<MaterialBannerThemeData>(
+        'bannerTheme',
+        bannerTheme,
+        defaultValue: defaultData.bannerTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<BottomAppBarTheme>(
+        'bottomAppBarTheme',
+        bottomAppBarTheme,
+        defaultValue: defaultData.bottomAppBarTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<BottomNavigationBarThemeData>(
+        'bottomNavigationBarTheme',
+        bottomNavigationBarTheme,
+        defaultValue: defaultData.bottomNavigationBarTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<BottomSheetThemeData>(
+        'bottomSheetTheme',
+        bottomSheetTheme,
+        defaultValue: defaultData.bottomSheetTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<ButtonThemeData>(
+        'buttonTheme',
+        buttonTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<CardThemeData>('cardTheme', cardTheme, level: DiagnosticLevel.debug),
+    );
+    properties.add(
+      DiagnosticsProperty<CheckboxThemeData>(
+        'checkboxTheme',
+        checkboxTheme,
+        defaultValue: defaultData.checkboxTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<ChipThemeData>('chipTheme', chipTheme, level: DiagnosticLevel.debug),
+    );
+    properties.add(
+      DiagnosticsProperty<DataTableThemeData>(
+        'dataTableTheme',
+        dataTableTheme,
+        defaultValue: defaultData.dataTableTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<DatePickerThemeData>(
+        'datePickerTheme',
+        datePickerTheme,
+        defaultValue: defaultData.datePickerTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<DialogThemeData>(
+        'dialogTheme',
+        dialogTheme,
+        defaultValue: defaultData.dialogTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<DividerThemeData>(
+        'dividerTheme',
+        dividerTheme,
+        defaultValue: defaultData.dividerTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<DrawerThemeData>(
+        'drawerTheme',
+        drawerTheme,
+        defaultValue: defaultData.drawerTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<DropdownMenuThemeData>(
+        'dropdownMenuTheme',
+        dropdownMenuTheme,
+        defaultValue: defaultData.dropdownMenuTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<ElevatedButtonThemeData>(
+        'elevatedButtonTheme',
+        elevatedButtonTheme,
+        defaultValue: defaultData.elevatedButtonTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<ExpansionTileThemeData>(
+        'expansionTileTheme',
+        expansionTileTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<FilledButtonThemeData>(
+        'filledButtonTheme',
+        filledButtonTheme,
+        defaultValue: defaultData.filledButtonTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<FloatingActionButtonThemeData>(
+        'floatingActionButtonTheme',
+        floatingActionButtonTheme,
+        defaultValue: defaultData.floatingActionButtonTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<IconButtonThemeData>(
+        'iconButtonTheme',
+        iconButtonTheme,
+        defaultValue: defaultData.iconButtonTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<ListTileThemeData>(
+        'listTileTheme',
+        listTileTheme,
+        defaultValue: defaultData.listTileTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<MenuBarThemeData>(
+        'menuBarTheme',
+        menuBarTheme,
+        defaultValue: defaultData.menuBarTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<MenuButtonThemeData>(
+        'menuButtonTheme',
+        menuButtonTheme,
+        defaultValue: defaultData.menuButtonTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<MenuThemeData>(
+        'menuTheme',
+        menuTheme,
+        defaultValue: defaultData.menuTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<NavigationBarThemeData>(
+        'navigationBarTheme',
+        navigationBarTheme,
+        defaultValue: defaultData.navigationBarTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<NavigationDrawerThemeData>(
+        'navigationDrawerTheme',
+        navigationDrawerTheme,
+        defaultValue: defaultData.navigationDrawerTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<NavigationRailThemeData>(
+        'navigationRailTheme',
+        navigationRailTheme,
+        defaultValue: defaultData.navigationRailTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<OutlinedButtonThemeData>(
+        'outlinedButtonTheme',
+        outlinedButtonTheme,
+        defaultValue: defaultData.outlinedButtonTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<PopupMenuThemeData>(
+        'popupMenuTheme',
+        popupMenuTheme,
+        defaultValue: defaultData.popupMenuTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<ProgressIndicatorThemeData>(
+        'progressIndicatorTheme',
+        progressIndicatorTheme,
+        defaultValue: defaultData.progressIndicatorTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<RadioThemeData>(
+        'radioTheme',
+        radioTheme,
+        defaultValue: defaultData.radioTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<SearchBarThemeData>(
+        'searchBarTheme',
+        searchBarTheme,
+        defaultValue: defaultData.searchBarTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<SearchViewThemeData>(
+        'searchViewTheme',
+        searchViewTheme,
+        defaultValue: defaultData.searchViewTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<SegmentedButtonThemeData>(
+        'segmentedButtonTheme',
+        segmentedButtonTheme,
+        defaultValue: defaultData.segmentedButtonTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<SliderThemeData>(
+        'sliderTheme',
+        sliderTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<SnackBarThemeData>(
+        'snackBarTheme',
+        snackBarTheme,
+        defaultValue: defaultData.snackBarTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<SwitchThemeData>(
+        'switchTheme',
+        switchTheme,
+        defaultValue: defaultData.switchTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<TabBarThemeData>(
+        'tabBarTheme',
+        tabBarTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<TextButtonThemeData>(
+        'textButtonTheme',
+        textButtonTheme,
+        defaultValue: defaultData.textButtonTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<TextSelectionThemeData>(
+        'textSelectionTheme',
+        textSelectionTheme,
+        defaultValue: defaultData.textSelectionTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<TimePickerThemeData>(
+        'timePickerTheme',
+        timePickerTheme,
+        defaultValue: defaultData.timePickerTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<ToggleButtonsThemeData>(
+        'toggleButtonsTheme',
+        toggleButtonsTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      DiagnosticsProperty<TooltipThemeData>(
+        'tooltipTheme',
+        tooltipTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
     // DEPRECATED (newest deprecations at the bottom)
-    properties.add(ColorProperty('accentColor', accentColor, defaultValue: defaultData.accentColor, level: DiagnosticLevel.debug));
-    properties.add(EnumProperty<Brightness>('accentColorBrightness', accentColorBrightness, defaultValue: defaultData.accentColorBrightness, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<TextTheme>('accentTextTheme', accentTextTheme, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<IconThemeData>('accentIconTheme', accentIconTheme, level: DiagnosticLevel.debug));
-    properties.add(ColorProperty('buttonColor', buttonColor, defaultValue: defaultData.buttonColor, level: DiagnosticLevel.debug));
-    properties.add(DiagnosticsProperty<bool>('fixTextFieldOutlineLabel', fixTextFieldOutlineLabel, level: DiagnosticLevel.debug));
-    properties.add(EnumProperty<Brightness>('primaryColorBrightness', primaryColorBrightness, defaultValue: defaultData.primaryColorBrightness, level: DiagnosticLevel.debug));
-    properties.add(EnumProperty<AndroidOverscrollIndicator>('androidOverscrollIndicator', androidOverscrollIndicator, defaultValue: null, level: DiagnosticLevel.debug));
-    properties.add(ColorProperty('toggleableActiveColor', toggleableActiveColor, defaultValue: defaultData.toggleableActiveColor, level: DiagnosticLevel.debug));
-    properties.add(ColorProperty('selectedRowColor', selectedRowColor, defaultValue: defaultData.selectedRowColor, level: DiagnosticLevel.debug));
-    properties.add(ColorProperty('errorColor', errorColor, defaultValue: defaultData.errorColor, level: DiagnosticLevel.debug));
-    properties.add(ColorProperty('backgroundColor', backgroundColor, defaultValue: defaultData.backgroundColor, level: DiagnosticLevel.debug));
-    properties.add(ColorProperty('bottomAppBarColor', bottomAppBarColor, defaultValue: defaultData.bottomAppBarColor, level: DiagnosticLevel.debug));
+    properties.add(
+      DiagnosticsProperty<ButtonBarThemeData>(
+        'buttonBarTheme',
+        buttonBarTheme,
+        defaultValue: defaultData.buttonBarTheme,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      ColorProperty(
+        'dialogBackgroundColor',
+        dialogBackgroundColor,
+        defaultValue: defaultData.dialogBackgroundColor,
+        level: DiagnosticLevel.debug,
+      ),
+    );
+    properties.add(
+      ColorProperty(
+        'indicatorColor',
+        indicatorColor,
+        defaultValue: defaultData.indicatorColor,
+        level: DiagnosticLevel.debug,
+      ),
+    );
   }
 }
 
@@ -2506,7 +2737,7 @@ class ThemeData with Diagnosticable {
 /// styles.
 ///
 /// In the most basic case, [ThemeData]'s `cupertinoOverrideTheme` is null and
-/// and descendant Cupertino widgets' styling is derived from the Material theme.
+/// descendant Cupertino widgets' styling is derived from the Material theme.
 ///
 /// To override individual parts of the Material-derived Cupertino styling,
 /// `cupertinoOverrideTheme`'s construction parameters can be used.
@@ -2530,21 +2761,14 @@ class ThemeData with Diagnosticable {
 class MaterialBasedCupertinoThemeData extends CupertinoThemeData {
   /// Create a [MaterialBasedCupertinoThemeData] based on a Material [ThemeData]
   /// and its `cupertinoOverrideTheme`.
-  ///
-  /// The [materialTheme] parameter must not be null.
-  MaterialBasedCupertinoThemeData({
-    required ThemeData materialTheme,
-  }) : this._(
-    materialTheme,
-    (materialTheme.cupertinoOverrideTheme ?? const CupertinoThemeData()).noDefault(),
-  );
+  MaterialBasedCupertinoThemeData({required ThemeData materialTheme})
+    : this._(
+        materialTheme,
+        (materialTheme.cupertinoOverrideTheme ?? const CupertinoThemeData()).noDefault(),
+      );
 
-  MaterialBasedCupertinoThemeData._(
-    this._materialTheme,
-    this._cupertinoOverrideTheme,
-  ) : assert(_materialTheme != null),
-      assert(_cupertinoOverrideTheme != null),
-      // Pass all values to the superclass so Material-agnostic properties
+  MaterialBasedCupertinoThemeData._(this._materialTheme, this._cupertinoOverrideTheme)
+    : // Pass all values to the superclass so Material-agnostic properties
       // like barBackgroundColor can still behave like a normal
       // CupertinoThemeData.
       super.raw(
@@ -2554,6 +2778,7 @@ class MaterialBasedCupertinoThemeData extends CupertinoThemeData {
         _cupertinoOverrideTheme.textTheme,
         _cupertinoOverrideTheme.barBackgroundColor,
         _cupertinoOverrideTheme.scaffoldBackgroundColor,
+        _cupertinoOverrideTheme.applyThemeToAll,
       );
 
   final ThemeData _materialTheme;
@@ -2563,13 +2788,16 @@ class MaterialBasedCupertinoThemeData extends CupertinoThemeData {
   Brightness get brightness => _cupertinoOverrideTheme.brightness ?? _materialTheme.brightness;
 
   @override
-  Color get primaryColor => _cupertinoOverrideTheme.primaryColor ?? _materialTheme.colorScheme.primary;
+  Color get primaryColor =>
+      _cupertinoOverrideTheme.primaryColor ?? _materialTheme.colorScheme.primary;
 
   @override
-  Color get primaryContrastingColor => _cupertinoOverrideTheme.primaryContrastingColor ?? _materialTheme.colorScheme.onPrimary;
+  Color get primaryContrastingColor =>
+      _cupertinoOverrideTheme.primaryContrastingColor ?? _materialTheme.colorScheme.onPrimary;
 
   @override
-  Color get scaffoldBackgroundColor => _cupertinoOverrideTheme.scaffoldBackgroundColor ?? _materialTheme.scaffoldBackgroundColor;
+  Color get scaffoldBackgroundColor =>
+      _cupertinoOverrideTheme.scaffoldBackgroundColor ?? _materialTheme.scaffoldBackgroundColor;
 
   /// Copies the [ThemeData]'s `cupertinoOverrideTheme`.
   ///
@@ -2589,6 +2817,7 @@ class MaterialBasedCupertinoThemeData extends CupertinoThemeData {
     CupertinoTextThemeData? textTheme,
     Color? barBackgroundColor,
     Color? scaffoldBackgroundColor,
+    bool? applyThemeToAll,
   }) {
     return MaterialBasedCupertinoThemeData._(
       _materialTheme,
@@ -2599,6 +2828,7 @@ class MaterialBasedCupertinoThemeData extends CupertinoThemeData {
         textTheme: textTheme,
         barBackgroundColor: barBackgroundColor,
         scaffoldBackgroundColor: scaffoldBackgroundColor,
+        applyThemeToAll: applyThemeToAll,
       ),
     );
   }
@@ -2612,6 +2842,32 @@ class MaterialBasedCupertinoThemeData extends CupertinoThemeData {
       _cupertinoOverrideTheme.resolveFrom(context),
     );
   }
+}
+
+/// A class for creating a Material theme with a color scheme based off of the
+/// colors from a [CupertinoThemeData]. This is intended to be used only in the
+/// case when a Material widget is unable to find a Material theme in the tree,
+/// but is able to find a Cupertino theme. Most often this will occur when a
+/// Material widget is used inside of a [CupertinoApp].
+///
+/// Besides the colors, this theme will use all the defaults from Material's
+/// [ThemeData], so if further customization is needed, it is best to manually
+/// add a Material [Theme] above the [CupertinoApp].
+class CupertinoBasedMaterialThemeData {
+  /// Creates a Material theme with a color scheme based off of the colors from
+  /// a [CupertinoThemeData].
+  CupertinoBasedMaterialThemeData({required CupertinoThemeData themeData})
+    : materialTheme = ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: themeData.primaryColor,
+          brightness: themeData.brightness ?? Brightness.light,
+          primary: themeData.primaryColor,
+          onPrimary: themeData.primaryContrastingColor,
+        ),
+      );
+
+  /// The Material theme data with colors based on an existing [CupertinoThemeData].
+  final ThemeData materialTheme;
 }
 
 @immutable
@@ -2630,9 +2886,9 @@ class _IdentityThemeDataCacheKey {
   bool operator ==(Object other) {
     // We are explicitly ignoring the possibility that the types might not
     // match in the interests of speed.
-    return other is _IdentityThemeDataCacheKey
-        && identical(other.baseTheme, baseTheme)
-        && identical(other.localTextGeometry, localTextGeometry);
+    return other is _IdentityThemeDataCacheKey &&
+        identical(other.baseTheme, baseTheme) &&
+        identical(other.localTextGeometry, localTextGeometry);
   }
 }
 
@@ -2642,7 +2898,7 @@ class _IdentityThemeDataCacheKey {
 /// The key that was inserted before all other keys is evicted first, i.e. the
 /// one inserted least recently.
 class _FifoCache<K, V> {
-  _FifoCache(this._maximumSize) : assert(_maximumSize != null && _maximumSize > 0);
+  _FifoCache(this._maximumSize) : assert(_maximumSize > 0);
 
   /// In Dart the map literal uses a linked hash-map implementation, whose keys
   /// are stored such that [Map.keys] returns them in the order they were
@@ -2657,11 +2913,8 @@ class _FifoCache<K, V> {
 
   /// Returns the previously cached value for the given key, if available;
   /// if not, calls the given callback to obtain it first.
-  ///
-  /// The arguments must not be null.
   V putIfAbsent(K key, V Function() loader) {
     assert(key != null);
-    assert(loader != null);
     final V? result = _cache[key];
     if (result != null) {
       return result;
@@ -2712,19 +2965,13 @@ class _FifoCache<K, V> {
 class VisualDensity with Diagnosticable {
   /// A const constructor for [VisualDensity].
   ///
-  /// All of the arguments must be non-null, and [horizontal] and [vertical]
-  /// must be in the interval between [minimumDensity] and [maximumDensity],
-  /// inclusive.
-  const VisualDensity({
-    this.horizontal = 0.0,
-    this.vertical = 0.0,
-  }) : assert(horizontal != null),
-       assert(vertical != null),
-       assert(vertical <= maximumDensity),
-       assert(vertical <= maximumDensity),
-       assert(vertical >= minimumDensity),
-       assert(horizontal <= maximumDensity),
-       assert(horizontal >= minimumDensity);
+  /// The [horizontal] and [vertical] arguments must be in the interval between
+  /// [minimumDensity] and [maximumDensity], inclusive.
+  const VisualDensity({this.horizontal = 0.0, this.vertical = 0.0})
+    : assert(vertical <= maximumDensity),
+      assert(vertical >= minimumDensity),
+      assert(horizontal <= maximumDensity),
+      assert(horizontal >= minimumDensity);
 
   /// The minimum allowed density.
   static const double minimumDensity = -4.0;
@@ -2759,30 +3006,41 @@ class VisualDensity with Diagnosticable {
   /// It corresponds to a density value of -2 in both axes.
   static const VisualDensity compact = VisualDensity(horizontal: -2.0, vertical: -2.0);
 
-  /// Returns a visual density that is adaptive based on the [defaultTargetPlatform].
+  /// Returns a [VisualDensity] that is adaptive based on the current platform
+  /// on which the framework is executing, from [defaultTargetPlatform].
   ///
-  /// For desktop platforms, this returns [compact], and for other platforms,
-  /// it returns a default-constructed [VisualDensity].
-  static VisualDensity get adaptivePlatformDensity {
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.android:
-      case TargetPlatform.iOS:
-      case TargetPlatform.fuchsia:
-        break;
-      case TargetPlatform.linux:
-      case TargetPlatform.macOS:
-      case TargetPlatform.windows:
-        return compact;
-    }
-    return VisualDensity.standard;
+  /// When [defaultTargetPlatform] is a desktop platform, this returns
+  /// [compact], and for other platforms, it returns a default-constructed
+  /// [VisualDensity].
+  ///
+  /// See also:
+  ///
+  /// * [defaultDensityForPlatform] which returns a [VisualDensity] that is
+  ///   adaptive based on the platform given to it.
+  /// * [defaultTargetPlatform] which returns the platform on which the
+  ///   framework is currently executing.
+  static VisualDensity get adaptivePlatformDensity =>
+      defaultDensityForPlatform(defaultTargetPlatform);
+
+  /// Returns a [VisualDensity] that is adaptive based on the given [platform].
+  ///
+  /// For desktop platforms, this returns [compact], and for other platforms, it
+  /// returns a default-constructed [VisualDensity].
+  ///
+  /// See also:
+  ///
+  /// * [adaptivePlatformDensity] which returns a [VisualDensity] that is
+  ///   adaptive based on [defaultTargetPlatform].
+  static VisualDensity defaultDensityForPlatform(TargetPlatform platform) {
+    return switch (platform) {
+      TargetPlatform.android || TargetPlatform.iOS || TargetPlatform.fuchsia => standard,
+      TargetPlatform.linux || TargetPlatform.macOS || TargetPlatform.windows => compact,
+    };
   }
 
   /// Copy the current [VisualDensity] with the given values replacing the
   /// current values.
-  VisualDensity copyWith({
-    double? horizontal,
-    double? vertical,
-  }) {
+  VisualDensity copyWith({double? horizontal, double? vertical}) {
     return VisualDensity(
       horizontal: horizontal ?? this.horizontal,
       vertical: vertical ?? this.vertical,
@@ -2831,7 +3089,7 @@ class VisualDensity with Diagnosticable {
   Offset get baseSizeAdjustment {
     // The number of logical pixels represented by an increase or decrease in
     // density by one. The Material Design guidelines say to increment/decrement
-    // sized in terms of four pixel increments.
+    // sizes in terms of four pixel increments.
     const double interval = 4.0;
 
     return Offset(horizontal, vertical) * interval;
@@ -2839,6 +3097,9 @@ class VisualDensity with Diagnosticable {
 
   /// Linearly interpolate between two densities.
   static VisualDensity lerp(VisualDensity a, VisualDensity b, double t) {
+    if (identical(a, b)) {
+      return a;
+    }
     return VisualDensity(
       horizontal: lerpDouble(a.horizontal, b.horizontal, t)!,
       vertical: lerpDouble(a.vertical, b.vertical, t)!,
@@ -2851,10 +3112,18 @@ class VisualDensity with Diagnosticable {
   /// The resulting minWidth and minHeight values are clamped to not exceed the
   /// maxWidth and maxHeight values, respectively.
   BoxConstraints effectiveConstraints(BoxConstraints constraints) {
-    assert(constraints != null && constraints.debugAssertIsValid());
+    assert(constraints.debugAssertIsValid());
     return constraints.copyWith(
-      minWidth: clampDouble(constraints.minWidth + baseSizeAdjustment.dx, 0.0, constraints.maxWidth),
-      minHeight: clampDouble(constraints.minHeight + baseSizeAdjustment.dy, 0.0, constraints.maxHeight),
+      minWidth: clampDouble(
+        constraints.minWidth + baseSizeAdjustment.dx,
+        0.0,
+        constraints.maxWidth,
+      ),
+      minHeight: clampDouble(
+        constraints.minHeight + baseSizeAdjustment.dy,
+        0.0,
+        constraints.maxHeight,
+      ),
     );
   }
 
@@ -2863,9 +3132,7 @@ class VisualDensity with Diagnosticable {
     if (other.runtimeType != runtimeType) {
       return false;
     }
-    return other is VisualDensity
-        && other.horizontal == horizontal
-        && other.vertical == vertical;
+    return other is VisualDensity && other.horizontal == horizontal && other.vertical == vertical;
   }
 
   @override
@@ -2883,3 +3150,122 @@ class VisualDensity with Diagnosticable {
     return '${super.toStringShort()}(h: ${debugFormatDouble(horizontal)}, v: ${debugFormatDouble(vertical)})';
   }
 }
+
+// BEGIN GENERATED TOKEN PROPERTIES - ColorScheme
+
+// Do not edit by hand. The code between the "BEGIN GENERATED" and
+// "END GENERATED" comments are generated from data in the Material
+// Design token database by the script:
+//   dev/tools/gen_defaults/bin/gen_defaults.dart.
+
+// dart format off
+const ColorScheme _colorSchemeLightM3 = ColorScheme(
+  brightness: Brightness.light,
+  primary: Color(0xFF6750A4),
+  onPrimary: Color(0xFFFFFFFF),
+  primaryContainer: Color(0xFFEADDFF),
+  onPrimaryContainer: Color(0xFF4F378B),
+  primaryFixed: Color(0xFFEADDFF),
+  primaryFixedDim: Color(0xFFD0BCFF),
+  onPrimaryFixed: Color(0xFF21005D),
+  onPrimaryFixedVariant: Color(0xFF4F378B),
+  secondary: Color(0xFF625B71),
+  onSecondary: Color(0xFFFFFFFF),
+  secondaryContainer: Color(0xFFE8DEF8),
+  onSecondaryContainer: Color(0xFF4A4458),
+  secondaryFixed: Color(0xFFE8DEF8),
+  secondaryFixedDim: Color(0xFFCCC2DC),
+  onSecondaryFixed: Color(0xFF1D192B),
+  onSecondaryFixedVariant: Color(0xFF4A4458),
+  tertiary: Color(0xFF7D5260),
+  onTertiary: Color(0xFFFFFFFF),
+  tertiaryContainer: Color(0xFFFFD8E4),
+  onTertiaryContainer: Color(0xFF633B48),
+  tertiaryFixed: Color(0xFFFFD8E4),
+  tertiaryFixedDim: Color(0xFFEFB8C8),
+  onTertiaryFixed: Color(0xFF31111D),
+  onTertiaryFixedVariant: Color(0xFF633B48),
+  error: Color(0xFFB3261E),
+  onError: Color(0xFFFFFFFF),
+  errorContainer: Color(0xFFF9DEDC),
+  onErrorContainer: Color(0xFF8C1D18),
+  background: Color(0xFFFEF7FF),
+  onBackground: Color(0xFF1D1B20),
+  surface: Color(0xFFFEF7FF),
+  surfaceBright: Color(0xFFFEF7FF),
+  surfaceContainerLowest: Color(0xFFFFFFFF),
+  surfaceContainerLow: Color(0xFFF7F2FA),
+  surfaceContainer: Color(0xFFF3EDF7),
+  surfaceContainerHigh: Color(0xFFECE6F0),
+  surfaceContainerHighest: Color(0xFFE6E0E9),
+  surfaceDim: Color(0xFFDED8E1),
+  onSurface: Color(0xFF1D1B20),
+  surfaceVariant: Color(0xFFE7E0EC),
+  onSurfaceVariant: Color(0xFF49454F),
+  outline: Color(0xFF79747E),
+  outlineVariant: Color(0xFFCAC4D0),
+  shadow: Color(0xFF000000),
+  scrim: Color(0xFF000000),
+  inverseSurface: Color(0xFF322F35),
+  onInverseSurface: Color(0xFFF5EFF7),
+  inversePrimary: Color(0xFFD0BCFF),
+  // The surfaceTint color is set to the same color as the primary.
+  surfaceTint: Color(0xFF6750A4),
+);
+
+const ColorScheme _colorSchemeDarkM3 = ColorScheme(
+  brightness: Brightness.dark,
+  primary: Color(0xFFD0BCFF),
+  onPrimary: Color(0xFF381E72),
+  primaryContainer: Color(0xFF4F378B),
+  onPrimaryContainer: Color(0xFFEADDFF),
+  primaryFixed: Color(0xFFEADDFF),
+  primaryFixedDim: Color(0xFFD0BCFF),
+  onPrimaryFixed: Color(0xFF21005D),
+  onPrimaryFixedVariant: Color(0xFF4F378B),
+  secondary: Color(0xFFCCC2DC),
+  onSecondary: Color(0xFF332D41),
+  secondaryContainer: Color(0xFF4A4458),
+  onSecondaryContainer: Color(0xFFE8DEF8),
+  secondaryFixed: Color(0xFFE8DEF8),
+  secondaryFixedDim: Color(0xFFCCC2DC),
+  onSecondaryFixed: Color(0xFF1D192B),
+  onSecondaryFixedVariant: Color(0xFF4A4458),
+  tertiary: Color(0xFFEFB8C8),
+  onTertiary: Color(0xFF492532),
+  tertiaryContainer: Color(0xFF633B48),
+  onTertiaryContainer: Color(0xFFFFD8E4),
+  tertiaryFixed: Color(0xFFFFD8E4),
+  tertiaryFixedDim: Color(0xFFEFB8C8),
+  onTertiaryFixed: Color(0xFF31111D),
+  onTertiaryFixedVariant: Color(0xFF633B48),
+  error: Color(0xFFF2B8B5),
+  onError: Color(0xFF601410),
+  errorContainer: Color(0xFF8C1D18),
+  onErrorContainer: Color(0xFFF9DEDC),
+  background: Color(0xFF141218),
+  onBackground: Color(0xFFE6E0E9),
+  surface: Color(0xFF141218),
+  surfaceBright: Color(0xFF3B383E),
+  surfaceContainerLowest: Color(0xFF0F0D13),
+  surfaceContainerLow: Color(0xFF1D1B20),
+  surfaceContainer: Color(0xFF211F26),
+  surfaceContainerHigh: Color(0xFF2B2930),
+  surfaceContainerHighest: Color(0xFF36343B),
+  surfaceDim: Color(0xFF141218),
+  onSurface: Color(0xFFE6E0E9),
+  surfaceVariant: Color(0xFF49454F),
+  onSurfaceVariant: Color(0xFFCAC4D0),
+  outline: Color(0xFF938F99),
+  outlineVariant: Color(0xFF49454F),
+  shadow: Color(0xFF000000),
+  scrim: Color(0xFF000000),
+  inverseSurface: Color(0xFFE6E0E9),
+  onInverseSurface: Color(0xFF322F35),
+  inversePrimary: Color(0xFF6750A4),
+  // The surfaceTint color is set to the same color as the primary.
+  surfaceTint: Color(0xFFD0BCFF),
+);
+// dart format on
+
+// END GENERATED TOKEN PROPERTIES - ColorScheme

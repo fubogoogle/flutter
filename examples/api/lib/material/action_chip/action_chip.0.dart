@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// Flutter code sample [ActionChip].
+// Flutter code sample [ActionChip].
 
 import 'package:flutter/material.dart';
 
@@ -33,9 +33,7 @@ class _ActionChipExampleState extends State<ActionChipExample> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('ActionChip Sample'),
-      ),
+      appBar: AppBar(title: const Text('ActionChip Sample')),
       body: Center(
         child: ActionChip(
           avatar: Icon(favorite ? Icons.favorite : Icons.favorite_border),

@@ -2,65 +2,60 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// Flutter code sample for [Slider].
-
 import 'package:flutter/material.dart';
 
-void main() => runApp(const MyApp());
+/// Flutter code sample for [Slider].
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+void main() => runApp(const SliderApp());
 
-  static const String _title = 'Flutter Code Sample';
+class SliderApp extends StatelessWidget {
+  const SliderApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: _title,
-      home: Scaffold(
-        appBar: AppBar(title: const Text(_title)),
-        body: const MyStatefulWidget(),
-      ),
-    );
+    return const MaterialApp(home: SliderExample());
   }
 }
 
-class MyStatefulWidget extends StatefulWidget {
-  const MyStatefulWidget({super.key});
+class SliderExample extends StatefulWidget {
+  const SliderExample({super.key});
 
   @override
-  State<MyStatefulWidget> createState() => _MyStatefulWidgetState();
+  State<SliderExample> createState() => _SliderExampleState();
 }
 
-class _MyStatefulWidgetState extends State<MyStatefulWidget> {
+class _SliderExampleState extends State<SliderExample> {
   double _currentSliderPrimaryValue = 0.2;
   double _currentSliderSecondaryValue = 0.5;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: <Widget>[
-        Slider(
-          value: _currentSliderPrimaryValue,
-          secondaryTrackValue: _currentSliderSecondaryValue,
-          label: _currentSliderPrimaryValue.round().toString(),
-          onChanged: (double value) {
-            setState(() {
-              _currentSliderPrimaryValue = value;
-            });
-          },
-        ),
-        Slider(
-          value: _currentSliderSecondaryValue,
-          label: _currentSliderSecondaryValue.round().toString(),
-          onChanged: (double value) {
-            setState(() {
-              _currentSliderSecondaryValue = value;
-            });
-          },
-        ),
-      ],
+    return Scaffold(
+      appBar: AppBar(title: const Text('Slider')),
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Slider(
+            value: _currentSliderPrimaryValue,
+            secondaryTrackValue: _currentSliderSecondaryValue,
+            label: _currentSliderPrimaryValue.round().toString(),
+            onChanged: (double value) {
+              setState(() {
+                _currentSliderPrimaryValue = value;
+              });
+            },
+          ),
+          Slider(
+            value: _currentSliderSecondaryValue,
+            label: _currentSliderSecondaryValue.round().toString(),
+            onChanged: (double value) {
+              setState(() {
+                _currentSliderSecondaryValue = value;
+              });
+            },
+          ),
+        ],
+      ),
     );
   }
 }

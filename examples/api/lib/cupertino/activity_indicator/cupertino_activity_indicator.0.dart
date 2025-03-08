@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// Flutter code sample for [CupertinoActivityIndicator].
-
 import 'package:flutter/cupertino.dart';
+
+/// Flutter code sample for [CupertinoActivityIndicator].
 
 void main() => runApp(const CupertinoIndicatorApp());
 
@@ -25,17 +25,15 @@ class CupertinoIndicatorExample extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(
-        middle: Text('CupertinoActivityIndicator Sample'),
-      ),
+    return const CupertinoPageScaffold(
+      navigationBar: CupertinoNavigationBar(middle: Text('CupertinoActivityIndicator Sample')),
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: <Widget>[
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const <Widget>[
+              children: <Widget>[
                 // Cupertino activity indicator with default properties.
                 CupertinoActivityIndicator(),
                 SizedBox(height: 10),
@@ -44,7 +42,7 @@ class CupertinoIndicatorExample extends StatelessWidget {
             ),
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const <Widget>[
+              children: <Widget>[
                 // Cupertino activity indicator with custom radius and color.
                 CupertinoActivityIndicator(radius: 20.0, color: CupertinoColors.activeBlue),
                 SizedBox(height: 10),
@@ -56,20 +54,17 @@ class CupertinoIndicatorExample extends StatelessWidget {
             ),
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const <Widget>[
+              children: <Widget>[
                 // Cupertino activity indicator with custom radius and disabled
                 // animation.
                 CupertinoActivityIndicator(radius: 20.0, animating: false),
                 SizedBox(height: 10),
-                Text(
-                  'radius: 20.0\nanimating: false',
-                  textAlign: TextAlign.center,
-                ),
+                Text('radius: 20.0\nanimating: false', textAlign: TextAlign.center),
               ],
             ),
           ],
         ),
-      )
+      ),
     );
   }
 }

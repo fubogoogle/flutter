@@ -11,14 +11,8 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('debugChildrenHaveDuplicateKeys control test', () {
     const Key key = Key('key');
-    final List<Widget> children = <Widget>[
-      Container(key: key),
-      Container(key: key),
-    ];
-    final Widget widget = Flex(
-      direction: Axis.vertical,
-      children: children,
-    );
+    final List<Widget> children = <Widget>[Container(key: key), Container(key: key)];
+    final Widget widget = Flex(direction: Axis.vertical, children: children);
     late FlutterError error;
     try {
       debugChildrenHaveDuplicateKeys(widget, children);
@@ -43,10 +37,7 @@ void main() {
 
   test('debugItemsHaveDuplicateKeys control test', () {
     const Key key = Key('key');
-    final List<Widget> items = <Widget>[
-      Container(key: key),
-      Container(key: key),
-    ];
+    final List<Widget> items = <Widget>[Container(key: key), Container(key: key)];
     late FlutterError error;
     try {
       debugItemsHaveDuplicateKeys(items);
@@ -79,14 +70,13 @@ void main() {
             expect(error.diagnostics[2], isA<DiagnosticsProperty<Element>>());
             expect(
               error.toStringDeep(),
-              equalsIgnoringHashCodes(
+              startsWith(
                 'FlutterError\n'
                 '   No Table widget found.\n'
                 '   Builder widgets require a Table widget ancestor.\n'
                 '   The specific widget that could not find a Table ancestor was:\n'
                 '     Builder\n'
-                '   The ownership chain for the affected widget is: "Builder ←\n'
-                '     [root]"\n',
+                '   The ownership chain for the affected widget is: "Builder ←', // End of ownership chain omitted, not relevant for test.
               ),
             );
           }
@@ -97,7 +87,10 @@ void main() {
   });
 
   testWidgets('debugCheckHasMediaQuery control test', (WidgetTester tester) async {
+    // Cannot use tester.pumpWidget here because it wraps the widget in a View,
+    // which introduces a MediaQuery ancestor.
     await tester.pumpWidget(
+      wrapWithView: false,
       Builder(
         builder: (BuildContext context) {
           late FlutterError error;
@@ -114,32 +107,35 @@ void main() {
               error.diagnostics.last.toStringDeep(),
               equalsIgnoringHashCodes(
                 'No MediaQuery ancestor could be found starting from the context\n'
-                'that was passed to MediaQuery.of(). This can happen because you\n'
-                'have not added a WidgetsApp, CupertinoApp, or MaterialApp widget\n'
-                '(those widgets introduce a MediaQuery), or it can happen if the\n'
-                'context you use comes from a widget above those widgets.\n',
+                'that was passed to MediaQuery.of(). This can happen because the\n'
+                'context used is not a descendant of a View widget, which\n'
+                'introduces a MediaQuery.\n',
               ),
             );
             expect(
               error.toStringDeep(),
-              equalsIgnoringHashCodes(
+              startsWith(
                 'FlutterError\n'
                 '   No MediaQuery widget ancestor found.\n'
                 '   Builder widgets require a MediaQuery widget ancestor.\n'
                 '   The specific widget that could not find a MediaQuery ancestor\n'
                 '   was:\n'
                 '     Builder\n'
-                '   The ownership chain for the affected widget is: "Builder ←\n'
-                '     [root]"\n'
+                '   The ownership chain for the affected widget is: "Builder ←', // Full chain omitted, not relevant for test.
+              ),
+            );
+            expect(
+              error.toStringDeep(),
+              endsWith(
+                '[root]"\n' // End of ownership chain.
                 '   No MediaQuery ancestor could be found starting from the context\n'
-                '   that was passed to MediaQuery.of(). This can happen because you\n'
-                '   have not added a WidgetsApp, CupertinoApp, or MaterialApp widget\n'
-                '   (those widgets introduce a MediaQuery), or it can happen if the\n'
-                '   context you use comes from a widget above those widgets.\n',
+                '   that was passed to MediaQuery.of(). This can happen because the\n'
+                '   context used is not a descendant of a View widget, which\n'
+                '   introduces a MediaQuery.\n',
               ),
             );
           }
-          return Container();
+          return View(view: tester.view, child: const SizedBox());
         },
       ),
     );
@@ -232,9 +228,7 @@ void main() {
         key: noLocalizationsAvailable,
         child: WidgetsApp(
           builder: (BuildContext context, Widget? child) {
-            return Container(
-              key: localizationsAvailable,
-            );
+            return Container(key: localizationsAvailable);
           },
           color: const Color(0xFF4CAF50),
         ),
@@ -243,11 +237,13 @@ void main() {
 
     expect(
       () => debugCheckHasWidgetsLocalizations(noLocalizationsAvailable.currentContext!),
-      throwsA(isAssertionError.having(
-        (AssertionError e) => e.message,
-        'message',
-        contains('No WidgetsLocalizations found'),
-      )),
+      throwsA(
+        isAssertionError.having(
+          (AssertionError e) => e.message,
+          'message',
+          contains('No WidgetsLocalizations found'),
+        ),
+      ),
     );
 
     expect(debugCheckHasWidgetsLocalizations(localizationsAvailable.currentContext!), isTrue);
@@ -257,7 +253,9 @@ void main() {
     debugHighlightDeprecatedWidgets = true;
     late FlutterError error;
     try {
-      debugAssertAllWidgetVarsUnset('The value of a widget debug variable was changed by the test.');
+      debugAssertAllWidgetVarsUnset(
+        'The value of a widget debug variable was changed by the test.',
+      );
     } on FlutterError catch (e) {
       error = e;
     } finally {
@@ -284,10 +282,7 @@ void main() {
                   colorFilter: ColorFilter.mode(Color(0xFFFF0000), BlendMode.color),
                   child: Placeholder(),
                 ),
-                const Opacity(
-                  opacity: 0.9,
-                  child: Placeholder(),
-                ),
+                const Opacity(opacity: 0.9, child: Placeholder()),
                 ImageFiltered(
                   imageFilter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
                   child: const Placeholder(),
@@ -297,20 +292,15 @@ void main() {
                   child: const Placeholder(),
                 ),
                 ShaderMask(
-                  shaderCallback: (Rect bounds) => const RadialGradient(
-                    radius: 0.05,
-                    colors:  <Color>[Color(0xFFFF0000),  Color(0xFF00FF00)],
-                    tileMode: TileMode.mirror,
-                  ).createShader(bounds),
+                  shaderCallback:
+                      (Rect bounds) => const RadialGradient(
+                        radius: 0.05,
+                        colors: <Color>[Color(0xFFFF0000), Color(0xFF00FF00)],
+                        tileMode: TileMode.mirror,
+                      ).createShader(bounds),
                   child: const Placeholder(),
                 ),
-                RangeSlider(
-                  values: const RangeValues(0.3, 0.7),
-                  onChanged: (RangeValues newValues) {},
-                ),
-                CompositedTransformFollower(
-                 link: LayerLink(),
-                ),
+                CompositedTransformFollower(link: LayerLink()),
               ],
             ),
           ),
@@ -333,9 +323,6 @@ void main() {
     expect(renderObject.debugLayer?.debugCreator, isNotNull);
 
     renderObject = tester.firstRenderObject(find.byType(ShaderMask));
-    expect(renderObject.debugLayer?.debugCreator, isNotNull);
-
-    renderObject = tester.firstRenderObject(find.byType(RangeSlider));
     expect(renderObject.debugLayer?.debugCreator, isNotNull);
 
     renderObject = tester.firstRenderObject(find.byType(CompositedTransformFollower));

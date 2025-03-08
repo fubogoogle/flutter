@@ -8,6 +8,15 @@ import '../build_info.dart';
 import 'build_system.dart';
 import 'exceptions.dart';
 
+//////////////////////////////////////////////////////////////////////
+//                                                                  //
+//  ✨ THINKING OF MOVING/REFACTORING THIS FILE? READ ME FIRST! ✨  //
+//                                                                  //
+//  There is a link to this file in //docs/tool/Engine-artfiacts.md //
+//  and it would be very kind of you to update the link, if needed. //
+//                                                                  //
+//////////////////////////////////////////////////////////////////////
+
 /// A set of source files.
 abstract class ResolvedFiles {
   /// Whether any of the sources we evaluated contained a missing depfile.
@@ -23,7 +32,7 @@ abstract class ResolvedFiles {
 /// Collects sources for a [Target] into a single list of [FileSystemEntities].
 class SourceVisitor implements ResolvedFiles {
   /// Create a new [SourceVisitor] from an [Environment].
-  SourceVisitor(this.environment, [ this.inputs = true ]);
+  SourceVisitor(this.environment, [this.inputs = true]);
 
   /// The current environment.
   final Environment environment;
@@ -70,11 +79,14 @@ class SourceVisitor implements ResolvedFiles {
 
   Iterable<File> _processList(String rawText) {
     return rawText
-    // Put every file on right-hand side on the separate line
+        // Put every file on right-hand side on the separate line
         .replaceAllMapped(_separatorExpr, (Match match) => '${match.group(1)}\n')
         .split('\n')
-    // Expand escape sequences, so that '\ ', for example,ß becomes ' '
-        .map<String>((String path) => path.replaceAllMapped(_escapeExpr, (Match match) => match.group(1)!).trim())
+        // Expand escape sequences, so that '\ ', for example,ß becomes ' '
+        .map<String>(
+          (String path) =>
+              path.replaceAllMapped(_escapeExpr, (Match match) => match.group(1)!).trim(),
+        )
         .where((String path) => path.isNotEmpty)
         .toSet()
         .map(environment.fileSystem.file);
@@ -88,48 +100,35 @@ class SourceVisitor implements ResolvedFiles {
   void visitPattern(String pattern, bool optional) {
     // perform substitution of the environmental values and then
     // of the local values.
-    final List<String> segments = <String>[];
     final List<String> rawParts = pattern.split('/');
     final bool hasWildcard = rawParts.last.contains('*');
     String? wildcardFile;
     if (hasWildcard) {
       wildcardFile = rawParts.removeLast();
     }
-    // If the pattern does not start with an env variable, then we have nothing
-    // to resolve it to, error out.
-    switch (rawParts.first) {
-      case Environment.kProjectDirectory:
-        segments.addAll(
-          environment.fileSystem.path.split(environment.projectDir.resolveSymbolicLinksSync()));
-        break;
-      case Environment.kBuildDirectory:
-        segments.addAll(environment.fileSystem.path.split(
-          environment.buildDir.resolveSymbolicLinksSync()));
-        break;
-      case Environment.kCacheDirectory:
-        segments.addAll(
-          environment.fileSystem.path.split(environment.cacheDir.resolveSymbolicLinksSync()));
-        break;
-      case Environment.kFlutterRootDirectory:
+    final List<String> segments = <String>[
+      ...environment.fileSystem.path.split(switch (rawParts.first) {
         // flutter root will not contain a symbolic link.
-        segments.addAll(
-          environment.fileSystem.path.split(environment.flutterRootDir.absolute.path));
-        break;
-      case Environment.kOutputDirectory:
-        segments.addAll(
-          environment.fileSystem.path.split(environment.outputDir.resolveSymbolicLinksSync()));
-        break;
-      default:
-        throw InvalidPatternException(pattern);
-    }
-    rawParts.skip(1).forEach(segments.add);
+        Environment.kFlutterRootDirectory => environment.flutterRootDir.absolute.path,
+        Environment.kProjectDirectory => environment.projectDir.resolveSymbolicLinksSync(),
+        Environment.kWorkspaceDirectory => environment.fileSystem.path.dirname(
+          environment.fileSystem.path.dirname(environment.packageConfigPath),
+        ),
+        Environment.kBuildDirectory => environment.buildDir.resolveSymbolicLinksSync(),
+        Environment.kCacheDirectory => environment.cacheDir.resolveSymbolicLinksSync(),
+        Environment.kOutputDirectory => environment.outputDir.resolveSymbolicLinksSync(),
+        // If the pattern does not start with an env variable, then we have nothing
+        // to resolve it to, error out.
+        _ => throw InvalidPatternException(pattern),
+      }),
+      ...rawParts.skip(1),
+    ];
     final String filePath = environment.fileSystem.path.joinAll(segments);
     if (!hasWildcard) {
       if (optional && !environment.fileSystem.isFileSync(filePath)) {
         return;
       }
-      sources.add(environment.fileSystem.file(
-        environment.fileSystem.path.normalize(filePath)));
+      sources.add(environment.fileSystem.file(environment.fileSystem.path.normalize(filePath)));
       return;
     }
     // Perform a simple match by splitting the wildcard containing file one
@@ -151,8 +150,7 @@ class SourceVisitor implements ResolvedFiles {
       if (wildcardSegments.isEmpty) {
         sources.add(environment.fileSystem.file(entity.absolute));
       } else if (wildcardSegments.length == 1) {
-        if (filename.startsWith(wildcardSegments[0]) ||
-            filename.endsWith(wildcardSegments[0])) {
+        if (filename.startsWith(wildcardSegments[0]) || filename.endsWith(wildcardSegments[0])) {
           sources.add(environment.fileSystem.file(entity.absolute));
         }
       } else if (filename.startsWith(wildcardSegments[0])) {
@@ -167,25 +165,30 @@ class SourceVisitor implements ResolvedFiles {
   ///
   /// If the [Artifact] points to a directory then all child files are included.
   /// To increase the performance of builds that use a known revision of Flutter,
-  /// these are updated to point towards the engine.version file instead of
+  /// these are updated to point towards the `engine.stamp` file instead of
   /// the artifact itself.
   void visitArtifact(Artifact artifact, TargetPlatform? platform, BuildMode? mode) {
     // This is not a local engine.
     if (environment.engineVersion != null) {
-      sources.add(environment.flutterRootDir
-        .childDirectory('bin')
-        .childDirectory('internal')
-        .childFile('engine.version'),
+      sources.add(
+        environment.flutterRootDir
+            .childDirectory('bin')
+            .childDirectory('cache')
+            .childFile('engine.stamp'),
       );
       return;
     }
-    final String path = environment.artifacts
-      .getArtifactPath(artifact, platform: platform, mode: mode);
+    final String path = environment.artifacts.getArtifactPath(
+      artifact,
+      platform: platform,
+      mode: mode,
+    );
     if (environment.fileSystem.isDirectorySync(path)) {
       sources.addAll(<File>[
-        for (FileSystemEntity entity in environment.fileSystem.directory(path).listSync(recursive: true))
-          if (entity is File)
-            entity,
+        for (final FileSystemEntity entity in environment.fileSystem
+            .directory(path)
+            .listSync(recursive: true))
+          if (entity is File) entity,
       ]);
       return;
     }
@@ -196,24 +199,24 @@ class SourceVisitor implements ResolvedFiles {
   ///
   /// If the [Artifact] points to a directory then all child files are included.
   /// To increase the performance of builds that use a known revision of Flutter,
-  /// these are updated to point towards the engine.version file instead of
+  /// these are updated to point towards the `engine.stamp` file instead of
   /// the artifact itself.
   void visitHostArtifact(HostArtifact artifact) {
     // This is not a local engine.
     if (environment.engineVersion != null) {
-      sources.add(environment.flutterRootDir
-        .childDirectory('bin')
-        .childDirectory('internal')
-        .childFile('engine.version'),
+      sources.add(
+        environment.flutterRootDir
+            .childDirectory('bin')
+            .childDirectory('cache')
+            .childFile('engine.stamp'),
       );
       return;
     }
     final FileSystemEntity entity = environment.artifacts.getHostArtifact(artifact);
     if (entity is Directory) {
       sources.addAll(<File>[
-        for (FileSystemEntity entity in entity.listSync(recursive: true))
-          if (entity is File)
-            entity,
+        for (final FileSystemEntity entity in entity.listSync(recursive: true))
+          if (entity is File) entity,
       ]);
       return;
     }
@@ -225,12 +228,13 @@ class SourceVisitor implements ResolvedFiles {
 abstract class Source {
   /// This source is a file URL which contains some references to magic
   /// environment variables.
-  const factory Source.pattern(String pattern, { bool optional }) = _PatternSource;
+  const factory Source.pattern(String pattern, {bool optional}) = _PatternSource;
 
   /// The source is provided by an [Artifact].
   ///
   /// If [artifact] points to a directory then all child files are included.
-  const factory Source.artifact(Artifact artifact, {TargetPlatform? platform, BuildMode? mode}) = _ArtifactSource;
+  const factory Source.artifact(Artifact artifact, {TargetPlatform? platform, BuildMode? mode}) =
+      _ArtifactSource;
 
   /// The source is provided by an [HostArtifact].
   ///
@@ -251,7 +255,7 @@ abstract class Source {
 }
 
 class _PatternSource implements Source {
-  const _PatternSource(this.value, { this.optional = false });
+  const _PatternSource(this.value, {this.optional = false});
 
   final String value;
   final bool optional;
@@ -264,7 +268,7 @@ class _PatternSource implements Source {
 }
 
 class _ArtifactSource implements Source {
-  const _ArtifactSource(this.artifact, { this.platform, this.mode });
+  const _ArtifactSource(this.artifact, {this.platform, this.mode});
 
   final Artifact artifact;
   final TargetPlatform? platform;

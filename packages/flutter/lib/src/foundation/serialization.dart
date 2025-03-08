@@ -5,7 +5,8 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-export 'dart:typed_data' show ByteData, Endian, Float32List, Float64List, Int32List, Int64List, Uint8List;
+export 'dart:typed_data'
+    show ByteData, Endian, Float32List, Float64List, Int32List, Int64List, Uint8List;
 
 /// Write-only buffer for incrementally building a [ByteData] instance.
 ///
@@ -170,8 +171,7 @@ class WriteBuffer {
 /// The byte order used is [Endian.host] throughout.
 class ReadBuffer {
   /// Creates a [ReadBuffer] for reading from the specified [data].
-  ReadBuffer(this.data)
-    : assert(data != null);
+  ReadBuffer(this.data);
 
   /// The underlying data being read.
   final ByteData data;

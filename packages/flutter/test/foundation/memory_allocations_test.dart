@@ -6,9 +6,33 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
+
+class PrintOverrideTestBinding extends AutomatedTestWidgetsFlutterBinding {
+  @override
+  DebugPrintCallback get debugPrintOverride => _enablePrint ? debugPrint : _emptyPrint;
+
+  static void _emptyPrint(String? message, {int? wrapWidth}) {}
+
+  static bool _enablePrint = true;
+
+  static void runWithDebugPrintDisabled(void Function() f) {
+    try {
+      _enablePrint = false;
+      f();
+    } finally {
+      _enablePrint = true;
+    }
+  }
+}
 
 void main() {
-  final MemoryAllocations ma = MemoryAllocations.instance;
+  // LeakTesting is turned off because it adds subscriptions to
+  // [FlutterMemoryAllocations], that may interfere with the tests.
+  LeakTesting.settings = LeakTesting.settings.withIgnoredAll();
+  final FlutterMemoryAllocations ma = FlutterMemoryAllocations.instance;
+
+  PrintOverrideTestBinding();
 
   setUp(() {
     assert(!ma.hasListeners);
@@ -16,22 +40,21 @@ void main() {
   });
 
   test('addListener and removeListener add and remove listeners.', () {
-
     final ObjectEvent event = ObjectDisposed(object: 'object');
-    ObjectEvent? recievedEvent;
-    void listener(ObjectEvent event) => recievedEvent = event;
+    ObjectEvent? receivedEvent;
+    void listener(ObjectEvent event) => receivedEvent = event;
     expect(ma.hasListeners, isFalse);
 
     ma.addListener(listener);
     _checkSdkHandlersSet();
     ma.dispatchObjectEvent(event);
-    expect(recievedEvent, equals(event));
+    expect(receivedEvent, equals(event));
     expect(ma.hasListeners, isTrue);
-    recievedEvent = null;
+    receivedEvent = null;
 
     ma.removeListener(listener);
     ma.dispatchObjectEvent(event);
-    expect(recievedEvent, isNull);
+    expect(receivedEvent, isNull);
     expect(ma.hasListeners, isFalse);
     _checkSdkHandlersNotSet();
   });
@@ -43,11 +66,13 @@ void main() {
       log.add('badListener1');
       throw ArgumentError();
     }
+
     void listener1(ObjectEvent event) => log.add('listener1');
     void badListener2(ObjectEvent event) {
       log.add('badListener2');
       throw ArgumentError();
     }
+
     void listener2(ObjectEvent event) => log.add('listener2');
 
     ma.addListener(badListener1);
@@ -56,8 +81,8 @@ void main() {
     ma.addListener(badListener2);
     ma.addListener(listener2);
 
-    ma.dispatchObjectEvent(event);
-    expect(log, <String>['badListener1', 'listener1', 'badListener2','listener2']);
+    PrintOverrideTestBinding.runWithDebugPrintDisabled(() => ma.dispatchObjectEvent(event));
+    expect(log, <String>['badListener1', 'listener1', 'badListener2', 'listener2']);
     expect(tester.takeException(), contains('Multiple exceptions (2)'));
 
     ma.removeListener(badListener1);
@@ -91,7 +116,7 @@ void main() {
     log.clear();
 
     ma.dispatchObjectEvent(event);
-    expect(log, <String>['listener1','listener2']);
+    expect(log, <String>['listener1', 'listener2']);
     log.clear();
 
     ma.removeListener(listener1);
@@ -180,20 +205,26 @@ void _checkSdkHandlersNotSet() {
 Future<int> _activateFlutterObjectsAndReturnCountOfEvents() async {
   int count = 0;
 
-  final ValueNotifier<bool> valueNotifier = ValueNotifier<bool>(true); count++;
-  final ChangeNotifier changeNotifier = ChangeNotifier()..addListener(() {}); count++;
-  final Picture picture = _createPicture(); count++;
+  final ValueNotifier<bool> valueNotifier = ValueNotifier<bool>(true);
+  count++;
+  final ChangeNotifier changeNotifier = ChangeNotifier()..addListener(() {});
+  count++;
+  final Picture picture = _createPicture();
+  count++;
 
-  valueNotifier.dispose(); count++;
-  changeNotifier.dispose(); count++;
-  picture.dispose(); count++;
+  valueNotifier.dispose();
+  count++;
+  changeNotifier.dispose();
+  count++;
+  picture.dispose();
+  count++;
 
-  // TODO(polina-c): Remove the condition after
-  // https://github.com/flutter/flutter/issues/110599 is fixed.
-  if (!kIsWeb) {
-    final Image image = await _createImage(); count++; count++; count++;
-    image.dispose(); count++;
-  }
+  final Image image = await _createImage();
+  count++;
+  count++;
+  count++;
+  image.dispose();
+  count++;
 
   return count;
 }

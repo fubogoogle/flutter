@@ -19,14 +19,10 @@ void main() {
   });
 
   testWithoutContext('Decode a normal string', () async {
-    assert(passedString != null);
-
     expect(decoder.convert(passedString.codeUnits), passedString);
   });
 
   testWithoutContext('Decode a malformed string', () async {
-    assert(nonpassString != null);
-
     expect(
       () => decoder.convert(nonpassString.codeUnits),
       throwsA(

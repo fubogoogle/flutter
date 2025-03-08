@@ -2,8 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+/// @docImport 'package:flutter/material.dart';
+library;
+
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 
 import 'basic.dart';
@@ -47,9 +51,7 @@ class SnapshotController extends ChangeNotifier {
   /// Create a new [SnapshotController].
   ///
   /// By default, [allowSnapshotting] is `false` and cannot be `null`.
-  SnapshotController({
-    bool allowSnapshotting = false,
-  }) : _allowSnapshotting = allowSnapshotting;
+  SnapshotController({bool allowSnapshotting = false}) : _allowSnapshotting = allowSnapshotting;
 
   /// Reset the snapshot held by any listening [SnapshotWidget].
   ///
@@ -97,11 +99,8 @@ class SnapshotController extends ChangeNotifier {
 ///   defaults to [SnapshotMode.normal] which will throw an exception if a
 ///   platform view is encountered.
 ///
-/// * The snapshotting functionality of this widget is not supported on the HTML
-///   backend of Flutter for the Web. Setting [SnapshotController.allowSnapshotting] to true
-///   may cause an error to be thrown. On the CanvasKit backend of Flutter, the
-///   performance of using this widget may regress performance due to the fact
-///   that both the UI and engine share a single thread.
+/// * On the CanvasKit backend of Flutter, the performance of using this widget may regress
+///   performance due to the fact that both the UI and engine share a single thread.
 class SnapshotWidget extends SingleChildRenderObjectWidget {
   /// Create a new [SnapshotWidget].
   ///
@@ -110,8 +109,9 @@ class SnapshotWidget extends SingleChildRenderObjectWidget {
     super.key,
     this.mode = SnapshotMode.normal,
     this.painter = const _DefaultSnapshotPainter(),
+    this.autoresize = false,
     required this.controller,
-    required super.child
+    required super.child,
   });
 
   /// The controller that determines when to display the children as a snapshot.
@@ -125,6 +125,12 @@ class SnapshotWidget extends SingleChildRenderObjectWidget {
   /// See [SnapshotMode] for more information.
   final SnapshotMode mode;
 
+  /// Whether or not changes in render object size should automatically re-create
+  /// the snapshot.
+  ///
+  /// Defaults to false.
+  final bool autoresize;
+
   /// The painter used to paint the child snapshot or child widgets.
   final SnapshotPainter painter;
 
@@ -134,8 +140,9 @@ class SnapshotWidget extends SingleChildRenderObjectWidget {
     return _RenderSnapshotWidget(
       controller: controller,
       mode: mode,
-      devicePixelRatio: MediaQuery.of(context).devicePixelRatio,
+      devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
       painter: painter,
+      autoresize: autoresize,
     );
   }
 
@@ -145,8 +152,9 @@ class SnapshotWidget extends SingleChildRenderObjectWidget {
     (renderObject as _RenderSnapshotWidget)
       ..controller = controller
       ..mode = mode
-      ..devicePixelRatio = MediaQuery.of(context).devicePixelRatio
-      ..painter = painter;
+      ..devicePixelRatio = MediaQuery.devicePixelRatioOf(context)
+      ..painter = painter
+      ..autoresize = autoresize;
   }
 }
 
@@ -159,10 +167,12 @@ class _RenderSnapshotWidget extends RenderProxyBox {
     required SnapshotController controller,
     required SnapshotMode mode,
     required SnapshotPainter painter,
+    required bool autoresize,
   }) : _devicePixelRatio = devicePixelRatio,
        _controller = controller,
        _mode = mode,
-       _painter = painter;
+       _painter = painter,
+       _autoresize = autoresize;
 
   /// The device pixel ratio used to create the child image.
   double get devicePixelRatio => _devicePixelRatio;
@@ -191,8 +201,7 @@ class _RenderSnapshotWidget extends RenderProxyBox {
     final SnapshotPainter oldPainter = painter;
     oldPainter.removeListener(markNeedsPaint);
     _painter = value;
-    if (oldPainter.runtimeType != painter.runtimeType ||
-        painter.shouldRepaint(oldPainter)) {
+    if (oldPainter.runtimeType != painter.runtimeType || painter.shouldRepaint(oldPainter)) {
       markNeedsPaint();
     }
     if (attached) {
@@ -230,7 +239,19 @@ class _RenderSnapshotWidget extends RenderProxyBox {
     markNeedsPaint();
   }
 
+  /// Whether or not changes in render object size should automatically re-rasterize.
+  bool get autoresize => _autoresize;
+  bool _autoresize;
+  set autoresize(bool value) {
+    if (value == autoresize) {
+      return;
+    }
+    _autoresize = value;
+    markNeedsPaint();
+  }
+
   ui.Image? _childRaster;
+  Size? _childRasterSize;
   // Set to true if the snapshot mode was not forced and a platform view
   // was encountered while attempting to snapshot the child.
   bool _disableSnapshotAttempt = false;
@@ -249,6 +270,7 @@ class _RenderSnapshotWidget extends RenderProxyBox {
     painter.removeListener(markNeedsPaint);
     _childRaster?.dispose();
     _childRaster = null;
+    _childRasterSize = null;
     super.detach();
   }
 
@@ -258,6 +280,7 @@ class _RenderSnapshotWidget extends RenderProxyBox {
     painter.removeListener(markNeedsPaint);
     _childRaster?.dispose();
     _childRaster = null;
+    _childRasterSize = null;
     super.dispose();
   }
 
@@ -265,6 +288,7 @@ class _RenderSnapshotWidget extends RenderProxyBox {
     _disableSnapshotAttempt = false;
     _childRaster?.dispose();
     _childRaster = null;
+    _childRasterSize = null;
     markNeedsPaint();
   }
 
@@ -280,37 +304,61 @@ class _RenderSnapshotWidget extends RenderProxyBox {
     // ignore: invalid_use_of_protected_member
     context.stopRecordingIfNeeded();
     if (mode != SnapshotMode.forced && !offsetLayer.supportsRasterization()) {
+      offsetLayer.dispose();
       if (mode == SnapshotMode.normal) {
         throw FlutterError('SnapshotWidget used with a child that contains a PlatformView.');
       }
       _disableSnapshotAttempt = true;
       return null;
     }
-    final ui.Image image = offsetLayer.toImageSync(Offset.zero & size, pixelRatio: devicePixelRatio);
+    final ui.Image image = offsetLayer.toImageSync(
+      Offset.zero & size,
+      pixelRatio: devicePixelRatio,
+    );
     offsetLayer.dispose();
+    _lastCachedSize = size;
     return image;
   }
+
+  Size? _lastCachedSize;
 
   @override
   void paint(PaintingContext context, Offset offset) {
     if (size.isEmpty) {
       _childRaster?.dispose();
       _childRaster = null;
+      _childRasterSize = null;
       return;
     }
     if (!controller.allowSnapshotting || _disableSnapshotAttempt) {
       _childRaster?.dispose();
       _childRaster = null;
+      _childRasterSize = null;
       painter.paint(context, offset, size, super.paint);
       return;
     }
-    _childRaster ??= _paintAndDetachToImage();
+
+    if (autoresize && size != _lastCachedSize && _lastCachedSize != null) {
+      _childRaster?.dispose();
+      _childRaster = null;
+    }
+
+    if (_childRaster == null) {
+      _childRaster = _paintAndDetachToImage();
+      _childRasterSize = size * devicePixelRatio;
+    }
     if (_childRaster == null) {
       painter.paint(context, offset, size, super.paint);
     } else {
-      painter.paintSnapshot(context, offset, size, _childRaster!, devicePixelRatio);
+      painter.paintSnapshot(
+        context,
+        offset,
+        size,
+        _childRaster!,
+        _childRasterSize!,
+        devicePixelRatio,
+      );
     }
-    return;
   }
 }
 
@@ -340,12 +388,19 @@ class _RenderSnapshotWidget extends RenderProxyBox {
 ///   final Rect src = Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble());
 ///   final Rect dst = Rect.fromLTWH(offset.dx, offset.dy, size.width, size.height);
 ///   final Paint paint = Paint()
-///     ..filterQuality = FilterQuality.low;
+///     ..filterQuality = FilterQuality.medium;
 ///   context.canvas.drawImageRect(image, src, dst, paint);
 /// }
 /// ```
 /// {@end-tool}
-abstract class SnapshotPainter extends ChangeNotifier  {
+abstract class SnapshotPainter extends ChangeNotifier {
+  /// Creates an instance of [SnapshotPainter].
+  SnapshotPainter() {
+    if (kFlutterMemoryAllocationsEnabled) {
+      ChangeNotifier.maybeDispatchObjectCreation(this);
+    }
+  }
+
   /// Called whenever the [image] that represents a [SnapshotWidget]s child should be painted.
   ///
   /// The image is rasterized at the physical pixel resolution and should be scaled down by
@@ -357,19 +412,28 @@ abstract class SnapshotPainter extends ChangeNotifier  {
   /// [SnapshotPainter] paints the snapshot. This must account for the fact that the image
   /// width and height will be given in physical pixels, while the image must be painted with
   /// device independent pixels. That is, the width and height of the image is the widget and
-  /// height of the provided `size`, multiplied by the `pixelRatio`:
+  /// height of the provided `size`, multiplied by the `pixelRatio`. In addition, the actual
+  /// size of the scene captured by the `image` is not `image.width` or `image.height`, but
+  /// indeed `sourceSize`, because the former is a rounded inaccurate integer:
   ///
   /// ```dart
-  /// void paint(PaintingContext context, Offset offset, Size size, ui.Image image, double pixelRatio) {
-  ///   final Rect src = Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble());
+  /// void paint(PaintingContext context, Offset offset, Size size, ui.Image image, Size sourceSize, double pixelRatio) {
+  ///   final Rect src = Rect.fromLTWH(0, 0, sourceSize.width, sourceSize.height);
   ///   final Rect dst = Rect.fromLTWH(offset.dx, offset.dy, size.width, size.height);
   ///   final Paint paint = Paint()
-  ///     ..filterQuality = FilterQuality.low;
+  ///     ..filterQuality = FilterQuality.medium;
   ///   context.canvas.drawImageRect(image, src, dst, paint);
   /// }
   /// ```
   /// {@end-tool}
-  void paintSnapshot(PaintingContext context, Offset offset, Size size, ui.Image image, double pixelRatio);
+  void paintSnapshot(
+    PaintingContext context,
+    Offset offset,
+    Size size,
+    ui.Image image,
+    Size sourceSize,
+    double pixelRatio,
+  );
 
   /// Paint the child via [painter], applying any effects that would have been painted
   /// in [SnapshotPainter.paintSnapshot].
@@ -411,33 +475,44 @@ class _DefaultSnapshotPainter implements SnapshotPainter {
   const _DefaultSnapshotPainter();
 
   @override
-  void addListener(ui.VoidCallback listener) { }
+  void addListener(ui.VoidCallback listener) {}
 
   @override
-  void dispose() { }
+  void dispose() {}
 
   @override
   bool get hasListeners => false;
 
   @override
-  void notifyListeners() { }
+  void notifyListeners() {}
 
   @override
-  void paint(PaintingContext context, ui.Offset offset, ui.Size size, PaintingContextCallback painter) {
+  void paint(
+    PaintingContext context,
+    ui.Offset offset,
+    ui.Size size,
+    PaintingContextCallback painter,
+  ) {
     painter(context, offset);
   }
 
   @override
-  void paintSnapshot(PaintingContext context, ui.Offset offset, ui.Size size, ui.Image image, double pixelRatio) {
-    final Rect src = Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble());
+  void paintSnapshot(
+    PaintingContext context,
+    ui.Offset offset,
+    ui.Size size,
+    ui.Image image,
+    Size sourceSize,
+    double pixelRatio,
+  ) {
+    final Rect src = Rect.fromLTWH(0, 0, sourceSize.width, sourceSize.height);
     final Rect dst = Rect.fromLTWH(offset.dx, offset.dy, size.width, size.height);
-    final Paint paint = Paint()
-      ..filterQuality = FilterQuality.low;
+    final Paint paint = Paint()..filterQuality = FilterQuality.medium;
     context.canvas.drawImageRect(image, src, dst, paint);
   }
 
   @override
-  void removeListener(ui.VoidCallback listener) { }
+  void removeListener(ui.VoidCallback listener) {}
 
   @override
   bool shouldRepaint(covariant _DefaultSnapshotPainter oldPainter) => false;
